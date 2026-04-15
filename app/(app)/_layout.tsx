@@ -3,34 +3,40 @@ import { View, Pressable, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { SymbolView } from 'expo-symbols';
 import { AppText } from '@/shared/components/AppText';
 import { colors } from '@/theme';
 
 // ─── Tab icons ────────────────────────────────────────────────────────────────
 
 function TabIcon({
-  emoji,
+  symbol,
   label,
   focused,
 }: {
-  emoji: string;
+  symbol: string;
   label: string;
   focused: boolean;
 }) {
   return (
-    <View className="items-center gap-0.5 pt-2">
-      <AppText
-        style={{
-          fontSize: 22,
-          opacity: focused ? 1 : 0.5,
-        }}
-      >
-        {emoji}
-      </AppText>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingTop: 2,
+      }}
+    >
+      <SymbolView
+        name={symbol as any}
+        size={20}
+        tintColor={focused ? colors.accent : colors.inkMuted}
+        resizeMode="scaleAspectFit"
+      />
       <AppText
         variant="label"
         style={{
-          fontSize: 10,
+          fontSize: 12,
           color: focused ? colors.accent : colors.inkMuted,
           fontWeight: focused ? '600' : '400',
         }}
@@ -62,7 +68,12 @@ function ProfileButton() {
           justifyContent: 'center',
         }}
       >
-        <AppText style={{ fontSize: 16 }}>👤</AppText>
+        <SymbolView
+          name="person.circle"
+          size={20}
+          tintColor={colors.inkMuted}
+          resizeMode="scaleAspectFit"
+        />
       </View>
     </Pressable>
   );
@@ -95,7 +106,7 @@ export default function AppTabLayout() {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          height: 56 + (Platform.OS === 'ios' ? insets.bottom : 0),
+          height: 52 + (Platform.OS === 'ios' ? insets.bottom : 0),
           paddingBottom: Platform.OS === 'ios' ? insets.bottom : 6,
           paddingTop: 0,
           elevation: 0,
@@ -111,7 +122,7 @@ export default function AppTabLayout() {
         options={{
           title: t('train_title'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🌊" label={t('train')} focused={focused} />
+            <TabIcon symbol="wind" label={t('train')} focused={focused} />
           ),
         }}
       />
@@ -120,7 +131,7 @@ export default function AppTabLayout() {
         options={{
           title: t('dive_title'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🤿" label={t('dive')} focused={focused} />
+            <TabIcon symbol="figure.pool.swim" label={t('dive')} focused={focused} />
           ),
         }}
       />
@@ -129,7 +140,7 @@ export default function AppTabLayout() {
         options={{
           title: t('results_title'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📊" label={t('results')} focused={focused} />
+            <TabIcon symbol="chart.line.uptrend.xyaxis" label={t('results')} focused={focused} />
           ),
         }}
       />
@@ -138,7 +149,7 @@ export default function AppTabLayout() {
         options={{
           title: t('culture_title'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📚" label={t('culture')} focused={focused} />
+            <TabIcon symbol="book.pages" label={t('culture')} focused={focused} />
           ),
         }}
       />

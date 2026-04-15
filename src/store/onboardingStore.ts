@@ -1,7 +1,50 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 import type { SupportedLanguage } from '@/i18n';
+
+// ─── FileSystem-based storage adapter (new-arch compatible) ──────────────────
+
+const fsDir = FileSystem.documentDirectory + 'store/';
+
+async function ensureDir() {
+  const info = await FileSystem.getInfoAsync(fsDir);
+  if (!info.exists) {
+    await FileSystem.makeDirectoryAsync(fsDir, { intermediates: true });
+  }
+}
+
+const fsStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      await ensureDir();
+      const path = fsDir + encodeURIComponent(key) + '.json';
+      const info = await FileSystem.getInfoAsync(path);
+      if (!info.exists) return null;
+      return await FileSystem.readAsStringAsync(path);
+    } catch {
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      await ensureDir();
+      const path = fsDir + encodeURIComponent(key) + '.json';
+      await FileSystem.writeAsStringAsync(path, value);
+    } catch {
+      // Non-fatal — state won't persist this write
+    }
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      const path = fsDir + encodeURIComponent(key) + '.json';
+      const info = await FileSystem.getInfoAsync(path);
+      if (info.exists) await FileSystem.deleteAsync(path);
+    } catch {
+      // Non-fatal
+    }
+  },
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,7 +120,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'deeply-onboarding',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => fsStorage),
     },
   ),
 );
