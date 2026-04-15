@@ -1,0 +1,37 @@
+{
+  "train": "Тренировки",
+  "dive": "Погружение",
+  "results": "Результаты",
+  "culture": "Культура",
+
+  "train_title": "Программы тренировок",
+  "train_empty": "Программы пока недоступны.",
+  "train_private": "Мои программы",
+  "train_private_empty": "Нет личных программ.",
+  "train_sessions": "сессий",
+  "train_free": "бесплатно",
+  "train_premium": "премиум",
+  "train_locked": "Закрыто",
+  "train_unlock": "Открыть",
+
+  "dive_title": "Шаблоны погружений",
+  "dive_empty": "Шаблоны погружений пока недоступны.",
+  "dive_target_hold": "Цель задержки",
+  "dive_depth": "Макс. глубина",
+  "dive_difficulty": "Сложность",
+
+  "results_title": "Ваши результаты",
+  "results_sign_in_prompt": "Войдите, чтобы увидеть историю тренировок и достижения.",
+  "results_total_runs": "Всего сессий",
+  "results_streak": "Текущая серия",
+  "results_streak_days": "{{count}} день",
+  "results_streak_days_plural": "{{count}} дней",
+  "results_achievements": "Достижения",
+  "results_programs": "Прогресс программ",
+  "results_no_achievements": "Выполняйте сессии, чтобы получать достижения.",
+
+  "culture_title": "Культура",
+  "culture_empty": "Статей пока нет.",
+  "culture_min_read": "{{count}} мин чтения",
+  "culture_sections_empty": "Разделы пока недоступны."
+}

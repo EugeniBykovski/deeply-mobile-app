@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.deeply.app"
+      "bundleIdentifier": "com.yauhenibykouski.deeply",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -33,10 +34,12 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-localization",
+      "expo-apple-authentication"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     }
   }
 }

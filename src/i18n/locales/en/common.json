@@ -1,0 +1,23 @@
+{
+  "continue": "Continue",
+  "save": "Save",
+  "cancel": "Cancel",
+  "retry": "Try again",
+  "loading": "Loading...",
+  "error_generic": "Something went wrong",
+  "error_connection": "Could not reach the server. Check your connection.",
+  "empty_default": "Nothing here yet",
+  "see_all": "See all",
+  "back": "Back",
+  "skip": "Skip",
+  "done": "Done",
+  "select": "Select",
+  "selected": "Selected",
+  "profile": "Profile",
+  "settings": "Settings",
+  "logout": "Sign out",
+  "delete_account": "Delete account",
+  "language": "Language",
+  "english": "English",
+  "russian": "Русский"
+}

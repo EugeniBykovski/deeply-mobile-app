@@ -1,0 +1,37 @@
+{
+  "train": "Train",
+  "dive": "Dive",
+  "results": "Results",
+  "culture": "Culture",
+
+  "train_title": "Training Programs",
+  "train_empty": "No programs available yet.",
+  "train_private": "My Programs",
+  "train_private_empty": "No private programs yet.",
+  "train_sessions": "sessions",
+  "train_free": "free",
+  "train_premium": "premium",
+  "train_locked": "Locked",
+  "train_unlock": "Unlock",
+
+  "dive_title": "Dive Templates",
+  "dive_empty": "No dive templates yet.",
+  "dive_target_hold": "Target hold",
+  "dive_depth": "Max depth",
+  "dive_difficulty": "Difficulty",
+
+  "results_title": "Your Results",
+  "results_sign_in_prompt": "Sign in to see your training history and achievements.",
+  "results_total_runs": "Total sessions",
+  "results_streak": "Current streak",
+  "results_streak_days": "{{count}} day",
+  "results_streak_days_plural": "{{count}} days",
+  "results_achievements": "Achievements",
+  "results_programs": "Program Progress",
+  "results_no_achievements": "Complete sessions to earn achievements.",
+
+  "culture_title": "Culture",
+  "culture_empty": "No articles yet.",
+  "culture_min_read": "{{count}} min read",
+  "culture_sections_empty": "No sections available."
+}

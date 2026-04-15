@@ -7,10 +7,11 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  /** True while restoring session on app launch */
   isLoading: boolean;
 
-  // Actions
   setAuth: (user: User, accessToken: string, refreshToken: string) => Promise<void>;
+  setUser: (user: User) => void;
   clearAuth: () => Promise<void>;
   restoreSession: () => Promise<void>;
 }
@@ -27,6 +28,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, accessToken, isAuthenticated: true });
   },
 
+  setUser: (user) => set({ user }),
+
   clearAuth: async () => {
     await SecureStore.deleteItemAsync(TOKEN_KEYS.access);
     await SecureStore.deleteItemAsync(TOKEN_KEYS.refresh);
@@ -37,11 +40,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEYS.access);
       if (token) {
-        // Token exists — mark as authenticated; user data fetched by useCurrentUser hook
         set({ accessToken: token, isAuthenticated: true });
       }
     } catch {
-      // Secure store unavailable (simulator edge case) — proceed unauthenticated
+      // SecureStore unavailable (e.g. simulator without passphrase) — safe to ignore
     } finally {
       set({ isLoading: false });
     }

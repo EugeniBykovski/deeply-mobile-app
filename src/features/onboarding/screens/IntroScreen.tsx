@@ -1,0 +1,109 @@
+import React from 'react';
+import { View } from 'react-native';
+import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { AppText } from '@/shared/components/AppText';
+import { AppButton } from '@/shared/components/AppButton';
+import { colors } from '@/theme';
+
+const BENEFITS = [
+  { icon: '🌊', titleKey: 'benefit_1_title', descKey: 'benefit_1_desc' },
+  { icon: '🤿', titleKey: 'benefit_2_title', descKey: 'benefit_2_desc' },
+  { icon: '📈', titleKey: 'benefit_3_title', descKey: 'benefit_3_desc' },
+  { icon: '📚', titleKey: 'benefit_4_title', descKey: 'benefit_4_desc' },
+] as const;
+
+export function IntroScreen() {
+  const { t } = useTranslation('onboarding');
+
+  return (
+    <SafeAreaView className="flex-1 bg-brand-bg">
+      <StatusBar style="light" />
+      <LinearGradient
+        colors={[colors.bg, '#0D2326', '#0B1C1D']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+
+      <View className="flex-1 px-6">
+        {/* Logo mark */}
+        <View className="items-center pt-12 pb-10">
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              borderWidth: 1.5,
+              borderColor: colors.accent,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(59,191,173,0.08)',
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(59,191,173,0.15)',
+                borderWidth: 1,
+                borderColor: colors.accent,
+              }}
+            />
+          </View>
+          <AppText
+            variant="display"
+            weight="bold"
+            className="mt-4 tracking-wider"
+          >
+            deeply
+          </AppText>
+          <AppText variant="caption" muted className="tracking-widest uppercase mt-1">
+            breathe · dive · focus
+          </AppText>
+        </View>
+
+        {/* Title */}
+        <AppText variant="title" weight="bold" className="mb-2">
+          {t('intro_title')}
+        </AppText>
+        <AppText secondary className="mb-8 leading-relaxed">
+          {t('intro_subtitle')}
+        </AppText>
+
+        {/* Benefits */}
+        <View className="gap-3 flex-1">
+          {BENEFITS.map((b) => (
+            <View
+              key={b.titleKey}
+              className="flex-row items-start gap-4 bg-brand-surface rounded-brand-lg p-4 border border-brand-border"
+            >
+              <AppText className="text-2xl">{b.icon}</AppText>
+              <View className="flex-1">
+                <AppText weight="semibold" className="mb-0.5">
+                  {t(b.titleKey)}
+                </AppText>
+                <AppText variant="caption" secondary className="leading-relaxed">
+                  {t(b.descKey)}
+                </AppText>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* CTA */}
+        <View className="pb-6 pt-6">
+          <AppButton
+            label={t('continue', { ns: 'common' })}
+            variant="primary"
+            size="lg"
+            className="w-full"
+            onPress={() => router.push('/(onboarding)/goals')}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}

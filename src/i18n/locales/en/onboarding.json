@@ -1,0 +1,53 @@
+{
+  "intro_title": "Welcome to Deeply",
+  "intro_subtitle": "Breathing exercises and freediving training for a focused, calm mind.",
+  "benefit_1_title": "Breathing programs",
+  "benefit_1_desc": "Structured sessions from beginner to pro freediver level.",
+  "benefit_2_title": "Breath-hold training",
+  "benefit_2_desc": "Apnea timers and dive templates inspired by professional freedivers.",
+  "benefit_3_title": "Track your progress",
+  "benefit_3_desc": "Session history, streaks, and achievements.",
+  "benefit_4_title": "Culture & knowledge",
+  "benefit_4_desc": "Articles on freediving, safety, athletes, and technique.",
+
+  "goal_title": "What is your goal?",
+  "goal_subtitle": "Select everything that applies.",
+  "goal_stress": "Reduce stress",
+  "goal_breathing": "Restore breathing",
+  "goal_training": "Personal training",
+  "goal_oxygen": "Oxygen measurements",
+  "goal_freediving": "Learn freediving",
+  "goal_sleep": "Better sleep",
+
+  "mode_title": "How much time per session?",
+  "mode_subtitle": "We will personalise your program.",
+  "mode_5": "5 min",
+  "mode_10": "10 min",
+  "mode_20": "20 min",
+  "mode_40": "40 min",
+
+  "notes_title": "Track your feelings?",
+  "notes_subtitle": "Would you like to add personal notes after each session?",
+  "notes_yes": "Yes, I want to track how I feel",
+  "notes_no": "No, just the training for now",
+
+  "level_title": "Your experience level",
+  "level_subtitle": "We will match programs to your level.",
+  "level_beginner": "Beginner",
+  "level_beginner_desc": "I'm new to breathwork.",
+  "level_intermediate": "Intermediate",
+  "level_intermediate_desc": "Some experience with breathing exercises.",
+  "level_regular": "Regular practitioner",
+  "level_regular_desc": "I practice consistently.",
+  "level_pro": "Professional freediver",
+  "level_pro_desc": "I train at competitive level.",
+
+  "signin_title": "Save your progress",
+  "signin_subtitle": "Sign in with Apple to sync your data across devices and unlock all features.",
+  "signin_apple": "Continue with Apple",
+  "signin_terms": "By continuing, you agree to our Terms of Service and Privacy Policy.",
+  "signin_error": "Apple Sign-In failed. Please try again.",
+  "signin_unavailable": "Apple Sign-In is only available on iOS devices.",
+
+  "step": "{{current}} of {{total}}"
+}

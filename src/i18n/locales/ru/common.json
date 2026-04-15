@@ -1,0 +1,23 @@
+{
+  "continue": "Продолжить",
+  "save": "Сохранить",
+  "cancel": "Отмена",
+  "retry": "Повторить",
+  "loading": "Загрузка...",
+  "error_generic": "Что-то пошло не так",
+  "error_connection": "Не удалось подключиться к серверу. Проверьте соединение.",
+  "empty_default": "Пока ничего нет",
+  "see_all": "Все",
+  "back": "Назад",
+  "skip": "Пропустить",
+  "done": "Готово",
+  "select": "Выбрать",
+  "selected": "Выбрано",
+  "profile": "Профиль",
+  "settings": "Настройки",
+  "logout": "Выйти",
+  "delete_account": "Удалить аккаунт",
+  "language": "Язык",
+  "english": "English",
+  "russian": "Русский"
+}
