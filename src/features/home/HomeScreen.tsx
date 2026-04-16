@@ -1,24 +1,19 @@
-import React, { useCallback } from 'react';
-import {
-  ScrollView,
-  View,
-  FlatList,
-  RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import React, { useCallback } from "react";
+import { ScrollView, View, FlatList, RefreshControl } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
-import { LoadingView } from '@/shared/components/LoadingView';
-import { ErrorView } from '@/shared/components/ErrorView';
-import { EmptyView } from '@/shared/components/EmptyView';
+import { LoadingView } from "@/shared/components/LoadingView";
+import { ErrorView } from "@/shared/components/ErrorView";
+import { EmptyView } from "@/shared/components/EmptyView";
 
-import { HomeHeader } from './components/HomeHeader';
-import { TrainBlockCard } from './components/TrainBlockCard';
-import { DivePreviewCard } from './components/DivePreviewCard';
-import { SectionHeader } from './components/SectionHeader';
+import { HomeHeader } from "./components/HomeHeader";
+import { TrainBlockCard } from "./components/TrainBlockCard";
+import { DivePreviewCard } from "./components/DivePreviewCard";
+import { SectionHeader } from "./components/SectionHeader";
 
-import { useTrainBlocks, useDiveTemplates } from './hooks/useHomeData';
-import type { TrainBlock, DiveTemplateItem } from '@/api/types';
+import { useTrainBlocks, useDiveTemplates } from "./hooks/useHomeData";
+import type { TrainBlock, DiveTemplateItem } from "@/api/types";
 
 export function HomeScreen() {
   const trainQuery = useTrainBlocks();
@@ -74,7 +69,7 @@ export function HomeScreen() {
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor="#3BBFAD"
-            colors={['#3BBFAD']}
+            colors={["#3BBFAD"]}
           />
         }
       >

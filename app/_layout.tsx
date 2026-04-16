@@ -14,6 +14,7 @@ import { queryClient } from '@/shared/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { SplashView } from '@/shared/components/SplashView';
+import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -50,10 +51,41 @@ export default function RootLayout() {
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.bg },
+            }}
+          >
             <Stack.Screen name="index" />
             <Stack.Screen name="(onboarding)" />
             <Stack.Screen name="(app)" />
+            {/* Returning-user sign-in — shown after logout when hasEverSignedIn is true */}
+            <Stack.Screen
+              name="signin"
+              options={{
+                animation: 'fade',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="settings"
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="culture/[slug]"
+              options={{
+                animation: 'slide_from_right',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
 

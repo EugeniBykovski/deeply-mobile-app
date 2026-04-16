@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { OnboardingLayout } from '../components/OnboardingLayout';
 import { AppText } from '@/shared/components/AppText';
+import { LiIcon } from '@/shared/components/LiIcon';
 import { useOnboardingStore, type ExperienceLevel } from '@/store/onboardingStore';
 import { colors } from '@/theme';
 
@@ -13,10 +14,10 @@ const LEVELS: {
   labelKey: string;
   descKey: string;
 }[] = [
-  { key: 'beginner', icon: '🌱', labelKey: 'level_beginner', descKey: 'level_beginner_desc' },
-  { key: 'intermediate', icon: '💧', labelKey: 'level_intermediate', descKey: 'level_intermediate_desc' },
-  { key: 'regular', icon: '🌊', labelKey: 'level_regular', descKey: 'level_regular_desc' },
-  { key: 'pro', icon: '🏆', labelKey: 'level_pro', descKey: 'level_pro_desc' },
+  { key: 'beginner', icon: 'leaf-1', labelKey: 'level_beginner', descKey: 'level_beginner_desc' },
+  { key: 'intermediate', icon: 'water-drop-1', labelKey: 'level_intermediate', descKey: 'level_intermediate_desc' },
+  { key: 'regular', icon: 'heart', labelKey: 'level_regular', descKey: 'level_regular_desc' },
+  { key: 'pro', icon: 'line-height', labelKey: 'level_pro', descKey: 'level_pro_desc' },
 ];
 
 export function LevelScreen() {
@@ -37,6 +38,7 @@ export function LevelScreen() {
       title={t('level_title')}
       subtitle={t('level_subtitle')}
       onContinue={handleContinue}
+      onBack={() => router.back()}
       continueDisabled={!selected}
     >
       <View className="gap-3">
@@ -66,7 +68,11 @@ export function LevelScreen() {
                       : 'rgba(255,255,255,0.05)',
                   }}
                 >
-                  <AppText className="text-2xl">{level.icon}</AppText>
+                  <LiIcon
+                    name={level.icon}
+                    size={22}
+                    color={isSelected ? colors.accent : colors.inkMuted}
+                  />
                 </View>
 
                 <View className="flex-1">
@@ -92,12 +98,7 @@ export function LevelScreen() {
                       justifyContent: 'center',
                     }}
                   >
-                    <AppText
-                      className="text-xs"
-                      style={{ color: colors.inkInverse, fontWeight: '700' }}
-                    >
-                      ✓
-                    </AppText>
+                    <LiIcon name="checkmark" size={12} color={colors.inkInverse} />
                   </View>
                 )}
               </View>

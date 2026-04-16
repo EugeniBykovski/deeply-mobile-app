@@ -1,7 +1,14 @@
-import React, { useCallback } from 'react';
-import { ScrollView, View, Pressable, RefreshControl, Image } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  ScrollView,
+  View,
+  Pressable,
+  RefreshControl,
+  Image,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
@@ -9,11 +16,15 @@ import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
 import { EmptyView } from '@/shared/components/EmptyView';
 import { AppText } from '@/shared/components/AppText';
+import { LiIcon } from '@/shared/components/LiIcon';
+import { PageTopBar } from '@/shared/components/PageTopBar';
 
 import { cultureService } from '@/api/services/culture.service';
 import { i18n } from '@/i18n';
 import type { CultureSection, CultureArticleListItem } from '@/api/types';
 import { colors } from '@/theme';
+
+// ─── Queries ──────────────────────────────────────────────────────────────────
 
 function useCultureSections() {
   return useQuery({
@@ -25,17 +36,133 @@ function useCultureSections() {
 function useCultureArticles(section?: string) {
   const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
   return useQuery({
-    queryKey: ['culture', 'articles', section, lang],
+    queryKey: ['culture', 'articles', section ?? 'all', lang],
     queryFn: () =>
-      cultureService.getArticles({ section, lang, limit: 20 }),
+      cultureService.getArticles({ section: section ?? undefined, lang, limit: 20 }),
     select: (data) => data.items,
   });
 }
 
+// ─── Filter chip ──────────────────────────────────────────────────────────────
+
+function FilterChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} className="active:opacity-75">
+      <View
+        style={{
+          paddingHorizontal: 14,
+          paddingVertical: 7,
+          borderRadius: 999,
+          backgroundColor: active ? colors.accent : colors.surface,
+          borderWidth: 1,
+          borderColor: active ? colors.accent : colors.border,
+        }}
+      >
+        <AppText
+          variant="caption"
+          weight={active ? 'semibold' : 'regular'}
+          style={{ color: active ? colors.inkInverse : colors.ink }}
+        >
+          {label}
+        </AppText>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Article card ─────────────────────────────────────────────────────────────
+
+function ArticleCard({ article }: { article: CultureArticleListItem }) {
+  const { t } = useTranslation('tabs');
+
+  return (
+    <Pressable
+      onPress={() =>
+        router.push({
+          pathname: '/culture/[slug]',
+          params: { slug: article.slug },
+        } as any)
+      }
+      className="active:opacity-75"
+    >
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
+          borderRadius: 16,
+          overflow: 'hidden',
+        }}
+      >
+        {article.coverImageUrl ? (
+          <Image
+            source={{ uri: article.coverImageUrl }}
+            style={{ width: '100%', height: 180 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={{
+              width: '100%',
+              height: 160,
+              backgroundColor: '#122628',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <LiIcon name="books-2" size={40} color={colors.inkMuted} />
+          </View>
+        )}
+
+        <View style={{ padding: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <View
+              style={{
+                backgroundColor: colors.border,
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 3,
+              }}
+            >
+              <AppText variant="label" muted>{article.section}</AppText>
+            </View>
+            {article.readTimeMinutes != null && (
+              <AppText variant="caption" muted>
+                {t('culture_min_read', { count: article.readTimeMinutes })}
+              </AppText>
+            )}
+          </View>
+
+          <AppText weight="semibold" numberOfLines={2} style={{ marginBottom: 4 }}>
+            {article.title}
+          </AppText>
+          {article.description && (
+            <AppText variant="caption" secondary numberOfLines={2} style={{ lineHeight: 18 }}>
+              {article.description}
+            </AppText>
+          )}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
 export function CultureScreen() {
   const { t } = useTranslation('tabs');
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
   const sectionsQuery = useCultureSections();
-  const articlesQuery = useCultureArticles();
+  const articlesQuery = useCultureArticles(activeSection ?? undefined);
 
   const handleRefresh = useCallback(() => {
     sectionsQuery.refetch();
@@ -45,125 +172,83 @@ export function CultureScreen() {
   const isLoading = sectionsQuery.isLoading || articlesQuery.isLoading;
   const isError = sectionsQuery.isError && articlesQuery.isError;
 
-  if (isLoading) {
-    return (
-      <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
-        <LoadingView fullScreen />
-      </SafeAreaView>
-    );
-  }
+  const sections: CultureSection[] = sectionsQuery.data ?? [];
+  const articles: CultureArticleListItem[] = articlesQuery.data ?? [];
 
-  if (isError) {
-    return (
-      <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
+  return (
+    <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
+      <StatusBar style="light" />
+
+      {/* Inline page header */}
+      <PageTopBar title={t('culture_title')} />
+
+      {isLoading ? (
+        <LoadingView fullScreen />
+      ) : isError ? (
         <ErrorView
           fullScreen
           message={t('error_connection', { ns: 'common' })}
           onRetry={handleRefresh}
         />
-      </SafeAreaView>
-    );
-  }
+      ) : (
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={
+                (sectionsQuery.isFetching || articlesQuery.isFetching) && !isLoading
+              }
+              onRefresh={handleRefresh}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
+        >
+          {/* Section filter chips */}
+          {sections.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingBottom: 14,
+                paddingTop: 4,
+                gap: 8,
+              }}
+            >
+              <FilterChip
+                label={t('culture_all', { defaultValue: 'All' })}
+                active={activeSection === null}
+                onPress={() => setActiveSection(null)}
+              />
+              {sections.map((sec) => (
+                <FilterChip
+                  key={sec.key}
+                  label={sec.title}
+                  active={activeSection === sec.key}
+                  onPress={() =>
+                    setActiveSection((prev) => (prev === sec.key ? null : sec.key))
+                  }
+                />
+              ))}
+            </ScrollView>
+          )}
 
-  const sections = sectionsQuery.data ?? [];
-  const articles = articlesQuery.data ?? [];
+          {/* Articles */}
+          {articles.length === 0 ? (
+            <EmptyView message={t('culture_empty')} />
+          ) : (
+            <View style={{ paddingHorizontal: 20, gap: 16 }}>
+              {articles.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))}
+            </View>
+          )}
 
-  return (
-    <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
-      <StatusBar style="light" />
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={(sectionsQuery.isFetching || articlesQuery.isFetching) && !isLoading}
-            onRefresh={handleRefresh}
-            tintColor="#3BBFAD"
-            colors={['#3BBFAD']}
-          />
-        }
-      >
-        {/* Header */}
-        <View className="px-5 pt-6 pb-4">
-          <AppText variant="title" weight="bold">{t('culture_title')}</AppText>
-        </View>
-
-        {/* Section chips */}
-        {sections.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 8 }}
-          >
-            {sections.map((sec: CultureSection) => (
-              <View
-                key={sec.key}
-                className="bg-brand-surface border border-brand-border rounded-full px-4 py-2"
-              >
-                <AppText variant="caption" weight="medium">
-                  {sec.title}
-                </AppText>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-
-        {/* Articles */}
-        {articles.length === 0 ? (
-          <EmptyView message={t('culture_empty')} />
-        ) : (
-          <View className="px-5 gap-3">
-            {articles.map((article: CultureArticleListItem) => (
-              <Pressable
-                key={article.id}
-                className="active:opacity-75"
-              >
-                <View className="bg-brand-surface border border-brand-border rounded-brand-lg overflow-hidden">
-                  {article.coverImageUrl ? (
-                    <Image
-                      source={{ uri: article.coverImageUrl }}
-                      style={{ width: '100%', height: 160 }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{ width: '100%', height: 100 }}
-                      className="bg-brand-card items-center justify-center"
-                    >
-                      <AppText className="text-3xl">🌊</AppText>
-                    </View>
-                  )}
-
-                  <View className="p-4">
-                    <View className="flex-row items-center gap-2 mb-2">
-                      <View className="bg-brand-border rounded-full px-2.5 py-0.5">
-                        <AppText variant="label" muted>
-                          {article.section}
-                        </AppText>
-                      </View>
-                      {article.readTimeMinutes != null && (
-                        <AppText variant="caption" muted>
-                          {t('culture_min_read', { count: article.readTimeMinutes })}
-                        </AppText>
-                      )}
-                    </View>
-                    <AppText weight="semibold" numberOfLines={2} className="mb-1">
-                      {article.title}
-                    </AppText>
-                    {article.description && (
-                      <AppText variant="caption" secondary numberOfLines={2} className="leading-relaxed">
-                        {article.description}
-                      </AppText>
-                    )}
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        <View className="h-8" />
-      </ScrollView>
+          <View className="h-8" />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

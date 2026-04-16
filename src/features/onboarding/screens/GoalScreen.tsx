@@ -4,16 +4,17 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { OnboardingLayout } from '../components/OnboardingLayout';
 import { AppText } from '@/shared/components/AppText';
+import { LiIcon } from '@/shared/components/LiIcon';
 import { useOnboardingStore, type OnboardingGoal } from '@/store/onboardingStore';
 import { colors } from '@/theme';
 
 const GOALS: { key: OnboardingGoal; icon: string; labelKey: string }[] = [
-  { key: 'stress', icon: '🧘', labelKey: 'goal_stress' },
-  { key: 'breathing', icon: '💨', labelKey: 'goal_breathing' },
-  { key: 'training', icon: '🏋️', labelKey: 'goal_training' },
-  { key: 'oxygen', icon: '📊', labelKey: 'goal_oxygen' },
-  { key: 'freediving', icon: '🤿', labelKey: 'goal_freediving' },
-  { key: 'sleep', icon: '🌙', labelKey: 'goal_sleep' },
+  { key: 'stress', icon: 'aimass', labelKey: 'goal_stress' },
+  { key: 'breathing', icon: 'beat', labelKey: 'goal_breathing' },
+  { key: 'training', icon: 'user-4', labelKey: 'goal_training' },
+  { key: 'oxygen', icon: 'stethoscope-1', labelKey: 'goal_oxygen' },
+  { key: 'freediving', icon: 'books-2', labelKey: 'goal_freediving' },
+  { key: 'sleep', icon: 'moon-half-right-5', labelKey: 'goal_sleep' },
 ];
 
 export function GoalScreen() {
@@ -39,6 +40,7 @@ export function GoalScreen() {
       title={t('goal_title')}
       subtitle={t('goal_subtitle')}
       onContinue={handleContinue}
+      onBack={() => router.back()}
       continueDisabled={selected.length === 0}
     >
       <View className="gap-2.5">
@@ -59,7 +61,24 @@ export function GoalScreen() {
                   borderColor: isSelected ? colors.accent : colors.border,
                 }}
               >
-                <AppText className="text-xl w-8 text-center">{goal.icon}</AppText>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: isSelected
+                      ? 'rgba(59,191,173,0.2)'
+                      : 'rgba(255,255,255,0.05)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <LiIcon
+                    name={goal.icon}
+                    size={18}
+                    color={isSelected ? colors.accent : colors.inkMuted}
+                  />
+                </View>
                 <AppText
                   weight={isSelected ? 'semibold' : 'regular'}
                   style={{ color: isSelected ? colors.accent : colors.ink }}
@@ -78,12 +97,7 @@ export function GoalScreen() {
                       justifyContent: 'center',
                     }}
                   >
-                    <AppText
-                      className="text-xs font-bold"
-                      style={{ color: colors.inkInverse }}
-                    >
-                      ✓
-                    </AppText>
+                    <LiIcon name="checkmark" size={12} color={colors.inkInverse} />
                   </View>
                 )}
               </View>

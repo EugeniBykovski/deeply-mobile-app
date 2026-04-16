@@ -4,6 +4,8 @@
   "results": "Results",
   "culture": "Culture",
 
+  "home_welcome": "Welcome to",
+
   "train_title": "Training Programs",
   "train_empty": "No programs available yet.",
   "train_private": "My Programs",
@@ -21,16 +23,18 @@
   "dive_difficulty": "Difficulty",
 
   "results_title": "Your Results",
-  "results_sign_in_prompt": "Sign in to see your training history and achievements.",
+  "results_empty_hint": "Complete your first session to start tracking progress.",
   "results_total_runs": "Total sessions",
   "results_streak": "Current streak",
   "results_streak_days": "{{count}} day",
   "results_streak_days_plural": "{{count}} days",
   "results_achievements": "Achievements",
   "results_programs": "Program Progress",
+  "results_private": "My Trainings",
   "results_no_achievements": "Complete sessions to earn achievements.",
 
   "culture_title": "Culture",
+  "culture_all": "All",
   "culture_empty": "No articles yet.",
   "culture_min_read": "{{count}} min read",
   "culture_sections_empty": "No sections available."

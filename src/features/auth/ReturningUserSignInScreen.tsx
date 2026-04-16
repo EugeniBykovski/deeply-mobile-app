@@ -6,31 +6,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { AppText } from '@/shared/components/AppText';
-import { AppleAuthButton } from '@/features/auth/AppleAuthButton';
-import { useAppleAuth } from '@/features/auth/useAppleAuth';
+import { AppleAuthButton } from './AppleAuthButton';
+import { useAppleAuth } from './useAppleAuth';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { colors } from '@/theme';
 
-export function SignInScreen() {
-  const { t } = useTranslation('onboarding');
-  const { complete, markSignedIn } = useOnboardingStore();
+/**
+ * Returning-user screen — shown when the user has previously signed in with
+ * Apple on this device but is currently signed out (e.g. after explicit logout
+ * or token expiry with no valid refresh token).
+ *
+ * Does NOT show the onboarding questionnaire — the user has already done that.
+ * The single goal here is fast, frictionless re-authentication.
+ */
+export function ReturningUserSignInScreen() {
+  const { t } = useTranslation('auth');
+  const { markSignedIn } = useOnboardingStore();
   const { signIn, isLoading, error } = useAppleAuth();
 
   const handleSignIn = async () => {
     await signIn();
-    // Record that this device has had a successful Apple sign-in.
-    // This prevents re-showing the onboarding questionnaire on future sign-outs.
+    // Mark device-level sign-in history (already true, but idempotent call is fine)
     markSignedIn();
-    complete();
-    router.replace('/(app)/train');
-  };
-
-  const handleSkip = () => {
-    // User skips sign-in — they stay in unauthenticated browse mode.
-    // We do NOT call markSignedIn() here because they haven't actually
-    // authenticated. If they sign out later from an authenticated session
-    // (after eventually signing in), hasEverSignedIn will already be true.
-    complete();
     router.replace('/(app)/train');
   };
 
@@ -43,7 +40,7 @@ export function SignInScreen() {
       />
 
       <View className="flex-1 px-6 justify-between py-8">
-        {/* Top — logo + rings */}
+        {/* Top — logo rings */}
         <View className="items-center pt-8">
           <View
             style={{
@@ -79,15 +76,26 @@ export function SignInScreen() {
               />
             </View>
           </View>
+
+          <AppText
+            variant="display"
+            weight="bold"
+            className="mt-5 tracking-wider"
+          >
+            deeply
+          </AppText>
+          <AppText variant="caption" muted className="tracking-widest uppercase mt-1">
+            breathe · dive · focus
+          </AppText>
         </View>
 
-        {/* Middle — text */}
-        <View className="items-center gap-4">
+        {/* Middle — welcome back copy */}
+        <View className="items-center gap-3">
           <AppText variant="title" weight="bold" className="text-center">
-            {t('signin_title')}
+            {t('welcome_back_title')}
           </AppText>
           <AppText secondary className="text-center leading-relaxed px-4">
-            {t('signin_subtitle')}
+            {t('welcome_back_subtitle')}
           </AppText>
         </View>
 
@@ -99,21 +107,12 @@ export function SignInScreen() {
             error={error}
           />
 
-          <View
-            onTouchEnd={handleSkip}
-            className="items-center py-3 active:opacity-60"
-          >
-            <AppText muted variant="caption">
-              {t('skip', { ns: 'common' })} for now
-            </AppText>
-          </View>
-
           <AppText
             variant="caption"
             muted
             className="text-center leading-relaxed"
           >
-            {t('signin_terms')}
+            {t('sign_in_terms')}
           </AppText>
         </View>
       </View>

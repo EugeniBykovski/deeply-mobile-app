@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { OnboardingLayout } from '../components/OnboardingLayout';
 import { AppText } from '@/shared/components/AppText';
+import { LiIcon } from '@/shared/components/LiIcon';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { colors } from '@/theme';
 
@@ -23,8 +24,8 @@ export function NotesScreen() {
   };
 
   const OPTIONS: { key: Choice; icon: string; label: string }[] = [
-    { key: 'yes', icon: '📝', label: t('notes_yes') },
-    { key: 'no', icon: '🎯', label: t('notes_no') },
+    { key: 'yes', icon: 'check-circle-1', label: t('notes_yes') },
+    { key: 'no', icon: 'xmark-circle', label: t('notes_no') },
   ];
 
   return (
@@ -34,6 +35,7 @@ export function NotesScreen() {
       title={t('notes_title')}
       subtitle={t('notes_subtitle')}
       onContinue={handleContinue}
+      onBack={() => router.back()}
       continueDisabled={choice === null}
     >
       <View className="gap-4">
@@ -55,7 +57,11 @@ export function NotesScreen() {
                   borderWidth: isSelected ? 1.5 : 1,
                 }}
               >
-                <AppText className="text-4xl">{opt.icon}</AppText>
+                <LiIcon
+                  name={opt.icon}
+                  size={40}
+                  color={isSelected ? colors.accent : colors.inkMuted}
+                />
                 <AppText
                   weight="medium"
                   className="text-center leading-relaxed"

@@ -5,7 +5,7 @@ import type { SupportedLanguage } from '@/i18n';
 
 // ─── FileSystem-based storage adapter (new-arch compatible) ──────────────────
 
-const fsDir = FileSystem.documentDirectory + 'store/';
+const fsDir = ((FileSystem as any).documentDirectory ?? '') + 'store/';
 
 async function ensureDir() {
   const info = await FileSystem.getInfoAsync(fsDir);
@@ -72,7 +72,18 @@ export interface OnboardingData {
 }
 
 interface OnboardingState {
+  /** True once the user has finished the onboarding questionnaire flow. */
   isCompleted: boolean;
+
+  /**
+   * True once the user has successfully authenticated via Apple Sign-In
+   * at least once on this device. This flag is NEVER cleared by sign-out
+   * or `clearAuth()` — it represents device-level account history and is
+   * used to route returning users directly to the sign-in screen instead
+   * of repeating the onboarding questionnaire.
+   */
+  hasEverSignedIn: boolean;
+
   language: SupportedLanguage;
   data: OnboardingData;
 
@@ -82,7 +93,17 @@ interface OnboardingState {
   setWantsNotes: (wants: boolean) => void;
   setLevel: (level: ExperienceLevel) => void;
   setLanguage: (lang: SupportedLanguage) => void;
+  /** Marks onboarding questionnaire as complete. Does not imply sign-in. */
   complete: () => void;
+  /**
+   * Marks that the user has successfully authenticated with Apple at least
+   * once. Call this after a successful Apple Sign-In on any screen.
+   * This is intentionally separate from `complete()` — a user can complete
+   * onboarding without signing in (skip), but `hasEverSignedIn` requires
+   * an actual successful auth exchange.
+   */
+  markSignedIn: () => void;
+  /** Resets questionnaire progress. Does NOT clear `hasEverSignedIn`. */
   reset: () => void;
 }
 
@@ -97,6 +118,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       isCompleted: false,
+      hasEverSignedIn: false,
       language: 'en',
       data: initialData,
 
@@ -116,6 +138,10 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       complete: () => set({ isCompleted: true }),
 
+      markSignedIn: () => set({ hasEverSignedIn: true }),
+
+      // reset() intentionally preserves hasEverSignedIn — it is device history,
+      // not questionnaire state.
       reset: () => set({ isCompleted: false, data: initialData }),
     }),
     {

@@ -1,81 +1,31 @@
 import React from 'react';
-import { View, Pressable, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { SymbolView } from 'expo-symbols';
-import { AppText } from '@/shared/components/AppText';
+import { LiIcon } from '@/shared/components/LiIcon';
 import { colors } from '@/theme';
 
-// ─── Tab icons ────────────────────────────────────────────────────────────────
+// ─── Tab icon — icon + accent dot, no text labels ─────────────────────────────
+//
+// Labels were removed because they wrapped/clipped on narrow screens and in
+// Russian locale (8–12 char tab names). Screen content owns its own title via
+// PageTopBar; the icons are self-evident. VoiceOver uses tabBarAccessibilityLabel.
 
-function TabIcon({
-  symbol,
-  label,
-  focused,
-}: {
-  symbol: string;
-  label: string;
-  focused: boolean;
-}) {
+function TabIcon({ liIcon, focused }: { liIcon: string; focused: boolean }) {
+  const tintColor = focused ? colors.accent : colors.inkMuted;
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingTop: 2,
-      }}
-    >
-      <SymbolView
-        name={symbol as any}
-        size={20}
-        tintColor={focused ? colors.accent : colors.inkMuted}
-        resizeMode="scaleAspectFit"
-      />
-      <AppText
-        variant="label"
-        style={{
-          fontSize: 12,
-          color: focused ? colors.accent : colors.inkMuted,
-          fontWeight: focused ? '600' : '400',
-        }}
-      >
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
-// ─── Profile button (top-right header) ───────────────────────────────────────
-
-function ProfileButton() {
-  return (
-    <Pressable
-      onPress={() => {}}
-      className="mr-4 active:opacity-60"
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-    >
+    <View style={{ alignItems: 'center', gap: 5, paddingTop: 8 }}>
+      <LiIcon name={liIcon} size={24} color={tintColor} />
       <View
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: 17,
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.border,
-          alignItems: 'center',
-          justifyContent: 'center',
+          width: focused ? 4 : 0,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: colors.accent,
         }}
-      >
-        <SymbolView
-          name="person.circle"
-          size={20}
-          tintColor={colors.inkMuted}
-          resizeMode="scaleAspectFit"
-        />
-      </View>
-    </Pressable>
+      />
+    </View>
   );
 }
 
@@ -85,29 +35,20 @@ export default function AppTabLayout() {
   const { t } = useTranslation('tabs');
   const insets = useSafeAreaInsets();
 
+  const tabBarContentHeight = 50;
+  const tabBarHeight = tabBarContentHeight + (Platform.OS === 'ios' ? insets.bottom : 0);
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: colors.bg,
-          borderBottomWidth: 0,
-          shadowOpacity: 0,
-          elevation: 0,
-        },
-        headerTitleStyle: {
-          color: colors.ink,
-          fontSize: 17,
-          fontWeight: '600',
-        },
-        headerTintColor: colors.ink,
-        headerRight: () => <ProfileButton />,
+        // Each screen renders its own header via PageTopBar — no native bar needed.
+        headerShown: false,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          height: 52 + (Platform.OS === 'ios' ? insets.bottom : 0),
-          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 6,
+          height: tabBarHeight,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 4,
           paddingTop: 0,
           elevation: 0,
           shadowOpacity: 0,
@@ -115,42 +56,35 @@ export default function AppTabLayout() {
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.inkMuted,
+        tabBarItemStyle: { paddingTop: 0, paddingBottom: 0 },
       }}
     >
       <Tabs.Screen
         name="train/index"
         options={{
-          title: t('train_title'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="wind" label={t('train')} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon liIcon="surfboard-2" focused={focused} />,
+          tabBarAccessibilityLabel: t('train'),
         }}
       />
       <Tabs.Screen
         name="dive/index"
         options={{
-          title: t('dive_title'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="figure.pool.swim" label={t('dive')} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon liIcon="stopwatch" focused={focused} />,
+          tabBarAccessibilityLabel: t('dive'),
         }}
       />
       <Tabs.Screen
         name="results/index"
         options={{
-          title: t('results_title'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="chart.line.uptrend.xyaxis" label={t('results')} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon liIcon="trend-up-1" focused={focused} />,
+          tabBarAccessibilityLabel: t('results'),
         }}
       />
       <Tabs.Screen
         name="culture/index"
         options={{
-          title: t('culture_title'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="book.pages" label={t('culture')} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon liIcon="books-2" focused={focused} />,
+          tabBarAccessibilityLabel: t('culture'),
         }}
       />
     </Tabs>

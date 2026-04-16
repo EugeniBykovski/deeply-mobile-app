@@ -17,6 +17,9 @@
   "settings": "Настройки",
   "logout": "Выйти",
   "delete_account": "Удалить аккаунт",
+  "delete_account_confirm_message": "Это навсегда удалит ваш аккаунт и все данные. Это действие нельзя отменить.",
+  "delete_account_confirm_button": "Удалить навсегда",
+  "delete_account_section_hint": "Безвозвратно удаляет аккаунт и все связанные данные. Отменить невозможно.",
   "language": "Язык",
   "english": "English",
   "russian": "Русский"

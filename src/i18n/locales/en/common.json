@@ -16,7 +16,10 @@
   "profile": "Profile",
   "settings": "Settings",
   "logout": "Sign out",
-  "delete_account": "Delete account",
+  "delete_account": "Delete Account",
+  "delete_account_confirm_message": "This will permanently delete your account and all data. This action cannot be undone.",
+  "delete_account_confirm_button": "Delete Forever",
+  "delete_account_section_hint": "Permanently removes your account and all associated data. This cannot be undone.",
   "language": "Language",
   "english": "English",
   "russian": "Русский"

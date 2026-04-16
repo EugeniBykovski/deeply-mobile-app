@@ -15,7 +15,7 @@ export function OnboardingProgress({ current, total }: OnboardingProgressProps) 
           key={i}
           style={{
             height: 3,
-            flex: i === current - 1 ? 2 : 1,
+            flex: 1,
             borderRadius: 2,
             backgroundColor:
               i < current ? colors.accent : 'rgba(255,255,255,0.15)',

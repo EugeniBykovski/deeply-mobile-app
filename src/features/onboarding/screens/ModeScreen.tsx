@@ -32,6 +32,7 @@ export function ModeScreen() {
       title={t('mode_title')}
       subtitle={t('mode_subtitle')}
       onContinue={handleContinue}
+      onBack={() => router.back()}
       continueDisabled={!selected}
     >
       <View className="gap-3">

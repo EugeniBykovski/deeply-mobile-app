@@ -4,6 +4,8 @@
   "results": "Результаты",
   "culture": "Культура",
 
+  "home_welcome": "Добро пожаловать в",
+
   "train_title": "Программы тренировок",
   "train_empty": "Программы пока недоступны.",
   "train_private": "Мои программы",
@@ -21,16 +23,18 @@
   "dive_difficulty": "Сложность",
 
   "results_title": "Ваши результаты",
-  "results_sign_in_prompt": "Войдите, чтобы увидеть историю тренировок и достижения.",
+  "results_empty_hint": "Завершите первую сессию, чтобы начать отслеживать прогресс.",
   "results_total_runs": "Всего сессий",
   "results_streak": "Текущая серия",
   "results_streak_days": "{{count}} день",
   "results_streak_days_plural": "{{count}} дней",
   "results_achievements": "Достижения",
   "results_programs": "Прогресс программ",
+  "results_private": "Мои тренировки",
   "results_no_achievements": "Выполняйте сессии, чтобы получать достижения.",
 
   "culture_title": "Культура",
+  "culture_all": "Все",
   "culture_empty": "Статей пока нет.",
   "culture_min_read": "{{count}} мин чтения",
   "culture_sections_empty": "Разделы пока недоступны."
