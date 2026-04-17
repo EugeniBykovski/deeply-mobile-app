@@ -7,14 +7,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { AppText } from '@/shared/components/AppText';
 import { AppButton } from '@/shared/components/AppButton';
+import { LiIcon } from '@/shared/components/LiIcon';
 import { colors } from '@/theme';
 
-const BENEFITS = [
-  { icon: '🌊', titleKey: 'benefit_1_title', descKey: 'benefit_1_desc' },
-  { icon: '🤿', titleKey: 'benefit_2_title', descKey: 'benefit_2_desc' },
-  { icon: '📈', titleKey: 'benefit_3_title', descKey: 'benefit_3_desc' },
-  { icon: '📚', titleKey: 'benefit_4_title', descKey: 'benefit_4_desc' },
-] as const;
+const BENEFITS: { icon: string; accent: string; titleKey: string; descKey: string }[] = [
+  { icon: 'water-drop-1', accent: '#3BBFAD', titleKey: 'benefit_1_title', descKey: 'benefit_1_desc' },
+  { icon: 'stopwatch',    accent: '#D4915A', titleKey: 'benefit_2_title', descKey: 'benefit_2_desc' },
+  { icon: 'trend-up-1',  accent: '#5A8FBF', titleKey: 'benefit_3_title', descKey: 'benefit_3_desc' },
+  { icon: 'books-2',     accent: '#8B7BB5', titleKey: 'benefit_4_title', descKey: 'benefit_4_desc' },
+];
 
 export function IntroScreen() {
   const { t } = useTranslation('onboarding');
@@ -78,9 +79,23 @@ export function IntroScreen() {
           {BENEFITS.map((b) => (
             <View
               key={b.titleKey}
-              className="flex-row items-start gap-4 bg-brand-surface rounded-brand-lg p-4 border border-brand-border"
+              className="flex-row items-center gap-4 bg-brand-surface rounded-brand-lg p-4 border border-brand-border"
             >
-              <AppText className="text-2xl">{b.icon}</AppText>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  backgroundColor: `${b.accent}18`,
+                  borderWidth: 1,
+                  borderColor: `${b.accent}30`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <LiIcon name={b.icon} size={22} color={b.accent} />
+              </View>
               <View className="flex-1">
                 <AppText weight="semibold" className="mb-0.5">
                   {t(b.titleKey)}
