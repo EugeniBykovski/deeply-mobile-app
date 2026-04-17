@@ -86,6 +86,38 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: colors.bg },
               }}
             />
+            <Stack.Screen
+              name="train/[slug]"
+              options={{
+                animation: 'slide_from_right',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="train/[slug]/[trainingSlug]"
+              options={{
+                animation: 'slide_from_right',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="train/run"
+              options={{
+                animation: 'slide_from_bottom',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="train/private/new"
+              options={{
+                animation: 'slide_from_right',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
 

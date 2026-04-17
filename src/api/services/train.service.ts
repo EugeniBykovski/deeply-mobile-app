@@ -18,20 +18,21 @@ export interface ProgramTrainingsParams {
 
 export const trainService = {
   getBlocks: async (params?: TrainBlocksParams): Promise<TrainBlock[]> => {
-    const { data } = await apiClient.get<TrainBlock[]>(endpoints.train.blocks, {
-      params,
-    });
-    return data;
+    const { data } = await apiClient.get<{ blocks: TrainBlock[] }>(
+      endpoints.train.blocks,
+      { params },
+    );
+    return data.blocks;
   },
 
   getProgramTrainings: async (
     slug: string,
     params?: ProgramTrainingsParams,
-  ): Promise<TrainingListItem[]> => {
-    const { data } = await apiClient.get<TrainingListItem[]>(
-      endpoints.train.programTrainings(slug),
-      { params },
-    );
+  ): Promise<{ program: { key: string; slug: string }; items: TrainingListItem[] }> => {
+    const { data } = await apiClient.get<{
+      program: { key: string; slug: string };
+      items: TrainingListItem[];
+    }>(endpoints.train.programTrainings(slug), { params });
     return data;
   },
 
@@ -47,25 +48,23 @@ export const trainService = {
   },
 
   getPrivateTrainings: async (): Promise<TrainingDetail[]> => {
-    const { data } = await apiClient.get<TrainingDetail[]>(
+    const { data } = await apiClient.get<{ items: TrainingDetail[] }>(
       endpoints.train.private,
     );
-    return data;
+    return data.items;
   },
 
   createPrivateTraining: async (
     payload: CreatePrivateTrainingPayload,
-  ): Promise<TrainingDetail> => {
-    const { data } = await apiClient.post<TrainingDetail>(
+  ): Promise<{ id: string }> => {
+    const { data } = await apiClient.post<{ id: string }>(
       endpoints.train.private,
       payload,
     );
     return data;
   },
 
-  saveRun: async (
-    payload: CreateTrainingRunPayload,
-  ): Promise<void> => {
+  saveRun: async (payload: CreateTrainingRunPayload): Promise<void> => {
     await apiClient.post(endpoints.train.runs, payload);
   },
 };

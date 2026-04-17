@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, ViewStyle } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 // ─── LineIcons name → SF Symbol mapping ───────────────────────────────────────
@@ -32,6 +32,7 @@ const SYMBOL_MAP: Record<string, string> = {
   // Track feelings
   'check-circle-1': 'checkmark.circle.fill',
   'xmark-circle': 'xmark.circle',
+  'xmark-circle-fill': 'xmark.circle.fill',
 
   // Experience level
   'leaf-1': 'leaf.fill',
@@ -41,12 +42,23 @@ const SYMBOL_MAP: Record<string, string> = {
 
   // Navigation
   'arrow-left': 'chevron.left',
+  'arrow-right': 'chevron.right',
   'chevron-right': 'chevron.right',
   'gear': 'gearshape.fill',
   'logout': 'rectangle.portrait.and.arrow.right',
   'trash': 'trash.fill',
   'globe': 'globe',
   'checkmark': 'checkmark',
+
+  // Training-specific
+  'lock': 'lock.fill',
+  'lock-open': 'lock.open.fill',
+  'play': 'play.fill',
+  'pause': 'pause.fill',
+  'stop': 'stop.fill',
+  'timer': 'timer',
+  'flame': 'flame.fill',
+  'bolt': 'bolt.fill',
 } as const;
 
 // ─── Emoji fallbacks for names without a direct SF Symbol ─────────────────────
@@ -64,9 +76,10 @@ export interface LiIconProps {
   name: string;
   size?: number;
   color?: string;
+  style?: ViewStyle;
 }
 
-export function LiIcon({ name, size = 22, color = '#F0F4F4' }: LiIconProps) {
+export function LiIcon({ name, size = 22, color = '#F0F4F4', style }: LiIconProps) {
   const sfSymbol = SYMBOL_MAP[name];
 
   if (sfSymbol) {
@@ -76,6 +89,7 @@ export function LiIcon({ name, size = 22, color = '#F0F4F4' }: LiIconProps) {
         size={size}
         tintColor={color}
         resizeMode="scaleAspectFit"
+        style={style}
       />
     );
   }
@@ -83,7 +97,12 @@ export function LiIcon({ name, size = 22, color = '#F0F4F4' }: LiIconProps) {
   // Emoji fallback for any unmapped names
   const emoji = EMOJI_FALLBACK[name] ?? '◆';
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={[
+        { width: size, height: size, alignItems: 'center', justifyContent: 'center' },
+        style,
+      ]}
+    >
       <Text style={{ fontSize: size * 0.75 }}>{emoji}</Text>
     </View>
   );
