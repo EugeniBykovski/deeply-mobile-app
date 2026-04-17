@@ -76,6 +76,8 @@ export interface TrainBlock {
   premiumTrainings: number;
 }
 
+export type TrainingRunStatus = 'completed' | 'in_progress' | null;
+
 export interface TrainingListItem {
   id: string;
   slug: string;
@@ -86,6 +88,8 @@ export interface TrainingListItem {
   isLocked: boolean;
   estimatedMinutes?: number | null;
   intensityLevel?: number | null;
+  /** null when user is not authenticated or has no runs for this training */
+  lastRunStatus: TrainingRunStatus;
   lang: string;
 }
 

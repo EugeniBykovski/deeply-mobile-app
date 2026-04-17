@@ -59,6 +59,10 @@ const SYMBOL_MAP: Record<string, string> = {
   'timer': 'timer',
   'flame': 'flame.fill',
   'bolt': 'bolt.fill',
+
+  // Run status badges
+  'checkmark-circle-fill': 'checkmark.circle.fill',
+  'clock-fill': 'clock.fill',
 } as const;
 
 // ─── Emoji fallbacks for names without a direct SF Symbol ─────────────────────

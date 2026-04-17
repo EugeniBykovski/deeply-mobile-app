@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { TOKEN_KEYS } from '@/api/client';
+import { authEvents } from '@/api/authEvents';
 import type { User } from '@/api/types';
 
 interface AuthState {
@@ -15,13 +16,15 @@ interface AuthState {
   clearAuth: () => Promise<void>;
   /**
    * Restores session from SecureStore on app launch.
-   * If a valid access token exists the store is marked authenticated.
-   * The user profile is fetched lazily on first use (via API interceptors).
+   * If a valid access token exists the store is marked authenticated
+   * and a background user-profile fetch is kicked off.
+   * Registers the auth-event handler so the 401 interceptor can clear
+   * state when a refresh fails.
    */
   restoreSession: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
@@ -36,43 +39,57 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
 
   clearAuth: async () => {
-    try {
-      await SecureStore.deleteItemAsync(TOKEN_KEYS.access);
-      await SecureStore.deleteItemAsync(TOKEN_KEYS.refresh);
-    } catch {
-      // SecureStore may be unavailable — proceed anyway
-    }
+    await Promise.allSettled([
+      SecureStore.deleteItemAsync(TOKEN_KEYS.access),
+      SecureStore.deleteItemAsync(TOKEN_KEYS.refresh),
+    ]);
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
 
   restoreSession: async () => {
+    // Wire the event bus so the 401 interceptor can trigger clearAuth()
+    // without creating a circular module dependency.
+    authEvents.onUnauthorized(() => {
+      get().clearAuth();
+    });
+
     try {
-      const [accessToken, refreshToken] = await Promise.all([
+      const [accessToken] = await Promise.all([
         SecureStore.getItemAsync(TOKEN_KEYS.access),
-        SecureStore.getItemAsync(TOKEN_KEYS.refresh),
+        SecureStore.getItemAsync(TOKEN_KEYS.refresh), // read but not stored in state — only needed by the interceptor
       ]);
 
       if (accessToken) {
-        // Mark authenticated immediately so the app can proceed.
-        // The access token is the source of truth; refresh token enables silent renewal.
+        // Mark authenticated immediately — bootstrap can continue without
+        // waiting for a network call.
         set({ accessToken, isAuthenticated: true });
 
-        // Lazy-fetch the user profile in the background so the rest of the
-        // bootstrap can continue without blocking on a network call.
-        // We do NOT await this — the user object will populate once available.
+        // Lazy-fetch the user profile. Fire-and-forget — does NOT block startup.
+        // If the access token is expired, the 401 interceptor will silently
+        // refresh it and retry. If refresh also fails, the interceptor emits
+        // `unauthorized` → authEvents handler → clearAuth() above.
         (async () => {
           try {
             const { userService } = await import('@/api/services/user.service');
             const user = await userService.getMe();
             set({ user });
           } catch {
-            // Profile fetch failed (e.g. expired token + no refresh).
-            // The 401 interceptor in apiClient will clear tokens if refresh fails.
+            // The interceptor already cleared SecureStore and emitted the
+            // unauthorized event if the refresh failed.
+            // As a safety net: if SecureStore is now empty, mirror that in state.
+            try {
+              const stillValid = await SecureStore.getItemAsync(TOKEN_KEYS.access);
+              if (!stillValid) {
+                set({ user: null, accessToken: null, isAuthenticated: false });
+              }
+            } catch {
+              // SecureStore unavailable — leave state as-is
+            }
           }
         })();
       }
     } catch {
-      // SecureStore unavailable (e.g. simulator without passphrase) — safe to ignore
+      // SecureStore unavailable (e.g. simulator without passphrase)
     } finally {
       set({ isLoading: false });
     }

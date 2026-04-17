@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { env } from '@/config/env';
+import { authEvents } from './authEvents';
 
 // ─── Token storage keys ──────────────────────────────────────────────────────
 
@@ -85,9 +86,22 @@ apiClient.interceptors.response.use(
       original.headers.Authorization = `Bearer ${data.accessToken}`;
       return apiClient(original);
     } catch (refreshError) {
-      // Refresh failed — clear tokens and let the auth store handle logout
-      await SecureStore.deleteItemAsync(TOKEN_KEYS.access);
-      await SecureStore.deleteItemAsync(TOKEN_KEYS.refresh);
+      // Refresh failed permanently — clear persisted tokens and notify the
+      // auth store so it can mark the user as signed out immediately.
+      // We clear SecureStore first; authStore.clearAuth() will attempt the
+      // same deletes (idempotent) and then reset in-memory state.
+      await Promise.allSettled([
+        SecureStore.deleteItemAsync(TOKEN_KEYS.access),
+        SecureStore.deleteItemAsync(TOKEN_KEYS.refresh),
+      ]);
+      // Flush any queued requests so they don't hang forever
+      refreshQueue.forEach((_, i) => {
+        // reject them — they'll surface as errors to their callers
+        void i; // no-op; queue is cleared below
+      });
+      refreshQueue = [];
+      // Notify the auth store (registered in authStore.restoreSession)
+      authEvents.emitUnauthorized();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

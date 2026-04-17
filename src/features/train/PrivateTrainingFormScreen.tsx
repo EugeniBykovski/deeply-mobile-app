@@ -20,7 +20,6 @@ import type { AxiosError } from 'axios';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { trainService } from '@/api/services/train.service';
-import { useAuthStore } from '@/store/authStore';
 import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
 
@@ -168,7 +167,6 @@ function ToggleRow({
 
 export function PrivateTrainingFormScreen() {
   const { t } = useTranslation('tabs');
-  const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
 
   const [name, setName] = useState('');
@@ -187,22 +185,6 @@ export function PrivateTrainingFormScreen() {
     const trimmedName = name.trim();
     if (!trimmedName) {
       Alert.alert('', t('train_private_name'));
-      return;
-    }
-
-    // Guard: private trainings require an authenticated session
-    if (!isAuthenticated) {
-      Alert.alert(
-        'Sign in required',
-        'Creating a personal training requires a Deeply account. Sign in to continue.',
-        [
-          { text: t('cancel', { ns: 'common' }), style: 'cancel' },
-          {
-            text: 'Sign in',
-            onPress: () => router.push('/signin' as any),
-          },
-        ],
-      );
       return;
     }
 
@@ -237,9 +219,7 @@ export function PrivateTrainingFormScreen() {
       const axiosErr = err as AxiosError<{ message?: string | string[] }>;
       const status = axiosErr?.response?.status;
 
-      if (status === 401 || status === 403) {
-        Alert.alert('Session expired', 'Please sign in again to create a training.');
-      } else if (status === 400) {
+      if (status === 400) {
         const detail = extractErrorMessage(err);
         Alert.alert(
           t('error_generic', { ns: 'common' }),
@@ -287,28 +267,6 @@ export function PrivateTrainingFormScreen() {
           </AppText>
         </View>
 
-        {/* Guest notice */}
-        {!isAuthenticated && (
-          <View
-            style={{
-              marginHorizontal: 20,
-              marginBottom: 12,
-              padding: 12,
-              backgroundColor: `${colors.warning}18`,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: `${colors.warning}44`,
-              flexDirection: 'row',
-              gap: 10,
-              alignItems: 'center',
-            }}
-          >
-            <LiIcon name="lock" size={16} color={colors.warning} />
-            <AppText variant="caption" style={{ color: colors.warning, flex: 1, lineHeight: 18 }}>
-              Saving a training requires signing in with Apple.
-            </AppText>
-          </View>
-        )}
 
         <ScrollView
           className="flex-1"

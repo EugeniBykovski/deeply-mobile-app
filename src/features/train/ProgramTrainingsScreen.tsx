@@ -122,6 +122,13 @@ function TrainingCard({
     }
   }
 
+  const statusColor =
+    item.lastRunStatus === 'completed'
+      ? '#3BBFAD'
+      : item.lastRunStatus === 'in_progress'
+      ? '#D4915A'
+      : null;
+
   return (
     <Pressable onPress={handlePress} className="active:opacity-75">
       <View
@@ -186,7 +193,31 @@ function TrainingCard({
           </View>
         </View>
 
-        {!item.isLocked && (
+        {/* Run-status badge — top-right corner */}
+        {!item.isLocked && item.lastRunStatus !== null && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: `${statusColor}18`,
+              borderRadius: 20,
+              padding: 3,
+            }}
+          >
+            <LiIcon
+              name={
+                item.lastRunStatus === 'completed'
+                  ? 'checkmark-circle-fill'
+                  : 'clock-fill'
+              }
+              size={16}
+              color={statusColor!}
+            />
+          </View>
+        )}
+
+        {!item.isLocked && item.lastRunStatus === null && (
           <LiIcon name="chevron-right" size={14} color={colors.inkMuted} />
         )}
       </View>
