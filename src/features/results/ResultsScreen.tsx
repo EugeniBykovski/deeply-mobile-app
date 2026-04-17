@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { resultsService } from '@/api/services/results.service';
 import type { ResultsSummary, RecentRunItem } from '@/api/types';
 import { colors } from '@/theme';
+import { useTrainingSessionStore } from '@/store/trainingSessionStore';
 
 // ─── Achievement labels ───────────────────────────────────────────────────────
 
@@ -207,6 +208,7 @@ export function ResultsScreen() {
   const { t } = useTranslation('tabs');
   const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
+  const { runs: localRuns } = useTrainingSessionStore();
 
   const summaryQuery = useResultsSummary();
   const recentQuery  = useRecentRuns();
@@ -226,11 +228,38 @@ export function ResultsScreen() {
 
   const summary    = summaryQuery.data as ResultsSummary | undefined;
   // Recent query failure is non-fatal — show whatever we have.
-  const recentRuns = recentQuery.data ?? [];
+  const backendRuns: RecentRunItem[] = recentQuery.data ?? [];
 
-  const isLoading  = summaryQuery.isLoading;
+  // Merge local session runs with backend runs, deduplicating by trainingId+date proximity.
+  // Local runs appear first and are shown even when not authenticated.
+  const localRunItems: RecentRunItem[] = localRuns.map((r) => ({
+    id: r.id,
+    type: 'training' as const,
+    startedAt: r.completedAt,
+    completed: r.completed,
+    title: r.trainingName,
+    totalSeconds: r.totalSeconds > 0 ? r.totalSeconds : null,
+  }));
+
+  // Filter out backend runs that match a local run (same trainingId within 5 min)
+  const localTrainingIds = new Set(localRuns.map((r) => r.trainingId));
+  const filteredBackend = backendRuns.filter((br) => {
+    if (!localTrainingIds.size) return true;
+    // Keep backend run if we don't have a local counterpart for this training
+    const matchingLocal = localRuns.find(
+      (lr) =>
+        lr.trainingId === br.id ||
+        (br.title === lr.trainingName &&
+          Math.abs(new Date(br.startedAt).getTime() - new Date(lr.completedAt).getTime()) < 5 * 60 * 1000),
+    );
+    return !matchingLocal;
+  });
+
+  const recentRuns = [...localRunItems, ...filteredBackend];
+
+  const isLoading  = isAuthenticated && summaryQuery.isLoading;
   // Only show a hard error if the primary summary query fails.
-  const isError    = summaryQuery.isError;
+  const isError    = isAuthenticated && summaryQuery.isError;
   const isFetching = (summaryQuery.isFetching || recentQuery.isFetching) && !isLoading;
 
   const hasAnyData = !!summary || recentRuns.length > 0;
@@ -241,9 +270,7 @@ export function ResultsScreen() {
 
       <PageTopBar title={t('results_title')} />
 
-      {!isAuthenticated ? (
-        <EmptyResultsState />
-      ) : isLoading ? (
+      {isLoading ? (
         <View style={{ paddingHorizontal: 20, gap: 16, paddingTop: 4 }}>
           <SkeletonStatRow />
           <Skeleton width="40%" height={18} />

@@ -23,6 +23,7 @@ import {
   useTrainingPrefsStore,
   type VisualizationMode,
 } from '@/store/trainingPrefsStore';
+import { useTrainingSessionStore } from '@/store/trainingSessionStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -286,6 +287,7 @@ export function TrainingRunScreen() {
   const trainingName = params.name ?? 'Training';
 
   const { visualizationMode, setVisualizationMode } = useTrainingPrefsStore();
+  const { addRun, setInProgress } = useTrainingSessionStore();
 
   const [runState,  setRunState]  = useState<RunState>('idle');
   const [stepIndex, setStepIndex] = useState(0);
@@ -375,6 +377,19 @@ export function TrainingRunScreen() {
     async (completed: boolean) => {
       if (isSavingRef.current) return;
       isSavingRef.current = true;
+
+      // Optimistic local update — immediately visible in Results tab
+      if (completed && trainingId) {
+        addRun({
+          id: `local-${Date.now()}`,
+          trainingId,
+          trainingName,
+          completedAt: new Date().toISOString(),
+          totalSeconds: elapsedRef.current,
+          completed: true,
+        });
+      }
+
       try {
         if (runIdRef.current) {
           await trainService.updateRun(runIdRef.current, {
@@ -388,13 +403,14 @@ export function TrainingRunScreen() {
             totalSeconds: elapsedRef.current,
           });
         }
-        invalidateCaches();
       } catch {
         // Non-fatal — guest users will hit 401 here.
+      } finally {
+        invalidateCaches();
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [trainingId, queryClient],
+    [trainingId, trainingName, queryClient, addRun],
   );
 
   // ─── Step advance ──────────────────────────────────────────────────────────────
@@ -438,6 +454,7 @@ export function TrainingRunScreen() {
     setRunState('running');
 
     if (trainingId) {
+      setInProgress(trainingId);
       trainService
         .saveRun({ templateId: trainingId, completed: false })
         .then((r) => {
