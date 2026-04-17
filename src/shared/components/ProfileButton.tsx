@@ -6,16 +6,23 @@ import { colors } from '@/theme';
 
 /**
  * Tappable avatar circle that opens the profile/logout sheet.
- * Kept in shared/ so any screen can embed it without importing from (app)/_layout.
+ *
+ * Wrapped in React.memo so it never re-renders when the parent (PageTopBar,
+ * screen component) re-renders due to unrelated state changes — this is a key
+ * part of preventing tab-switch title jitter.
+ *
+ * The fixed 34×34 container ensures it always occupies the same layout space
+ * regardless of any internal state change.
  */
-export function ProfileButton() {
+export const ProfileButton = React.memo(function ProfileButton() {
   const [visible, setVisible] = useState(false);
 
   return (
-    <>
+    <View style={{ width: 34, height: 34, flexShrink: 0 }}>
       <Pressable
         onPress={() => setVisible(true)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={{ flex: 1 }}
         className="active:opacity-60"
       >
         <View
@@ -35,6 +42,6 @@ export function ProfileButton() {
       </Pressable>
 
       <ProfileMenuSheet visible={visible} onClose={() => setVisible(false)} />
-    </>
+    </View>
   );
-}
+});

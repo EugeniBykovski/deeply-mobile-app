@@ -5,8 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
-import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
+import { Skeleton, SkeletonRow, SkeletonStatRow } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { PageTopBar } from '@/shared/components/PageTopBar';
@@ -90,7 +90,21 @@ export function ResultsScreen() {
       {!isAuthenticated ? (
         <EmptyResultsState />
       ) : query.isLoading ? (
-        <LoadingView fullScreen />
+        <View style={{ paddingHorizontal: 20, gap: 16, paddingTop: 4 }}>
+          <SkeletonStatRow />
+          <Skeleton width="40%" height={18} />
+          <View style={{ gap: 10 }}>
+            {Array.from({ length: 3 }, (_, i) => (
+              <SkeletonRow key={i} badge />
+            ))}
+          </View>
+          <Skeleton width="40%" height={18} />
+          <View style={{ gap: 10 }}>
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} height={64} />
+            ))}
+          </View>
+        </View>
       ) : query.isError ? (
         <ErrorView
           fullScreen

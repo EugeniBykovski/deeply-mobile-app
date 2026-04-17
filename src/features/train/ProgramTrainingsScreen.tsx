@@ -13,8 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { i18n } from '@/i18n';
 
-import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
+import { SkeletonRow } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { trainService } from '@/api/services/train.service';
@@ -236,7 +236,11 @@ export function ProgramTrainingsScreen() {
       </View>
 
       {query.isLoading ? (
-        <LoadingView fullScreen />
+        <View style={{ paddingHorizontal: 16, gap: 10 }}>
+          {Array.from({ length: 12 }, (_, i) => (
+            <SkeletonRow key={i} badge />
+          ))}
+        </View>
       ) : query.isError ? (
         <ErrorView
           fullScreen

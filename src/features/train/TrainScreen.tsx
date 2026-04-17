@@ -5,9 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
 import { EmptyView } from '@/shared/components/EmptyView';
+import { SkeletonProgramCard } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { PageTopBar } from '@/shared/components/PageTopBar';
 import { LiIcon } from '@/shared/components/LiIcon';
@@ -123,7 +123,14 @@ export function TrainScreen() {
       <PageTopBar title={t('train_title')} />
 
       {query.isLoading ? (
-        <LoadingView fullScreen />
+        <View style={{ paddingHorizontal: 16, gap: 12 }}>
+          {[0, 1, 2, 3].map((row) => (
+            <View key={row} style={{ flexDirection: 'row', gap: 12 }}>
+              <SkeletonProgramCard />
+              <SkeletonProgramCard />
+            </View>
+          ))}
+        </View>
       ) : query.isError ? (
         <ErrorView
           fullScreen

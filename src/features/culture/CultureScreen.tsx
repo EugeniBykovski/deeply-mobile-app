@@ -12,8 +12,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
-import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
+import { SkeletonArticleCard } from '@/shared/components/Skeleton';
 import { EmptyView } from '@/shared/components/EmptyView';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
@@ -183,7 +183,11 @@ export function CultureScreen() {
       <PageTopBar title={t('culture_title')} />
 
       {isLoading ? (
-        <LoadingView fullScreen />
+        <View style={{ paddingHorizontal: 20, gap: 16, paddingTop: 4 }}>
+          {Array.from({ length: 4 }, (_, i) => (
+            <SkeletonArticleCard key={i} />
+          ))}
+        </View>
       ) : isError ? (
         <ErrorView
           fullScreen

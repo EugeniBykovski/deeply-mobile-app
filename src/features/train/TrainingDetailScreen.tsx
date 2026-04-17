@@ -7,8 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { i18n } from '@/i18n';
 
-import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
+import { Skeleton, SkeletonRow } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { trainService } from '@/api/services/train.service';
@@ -235,7 +235,20 @@ export function TrainingDetailScreen() {
       </View>
 
       {query.isLoading ? (
-        <LoadingView fullScreen />
+        <View style={{ paddingHorizontal: 20, gap: 16 }}>
+          <Skeleton width="70%" height={14} />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Skeleton height={60} style={{ flex: 1 }} />
+            <Skeleton height={60} style={{ flex: 1 }} />
+            <Skeleton height={60} style={{ flex: 1 }} />
+          </View>
+          <Skeleton width="100%" height={12} />
+          <View style={{ gap: 8 }}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <SkeletonRow key={i} badge />
+            ))}
+          </View>
+        </View>
       ) : query.isError || !training ? (
         <ErrorView
           fullScreen

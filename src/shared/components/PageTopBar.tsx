@@ -14,15 +14,17 @@ interface PageTopBarProps {
 /**
  * Inline page header that replaces the native navigation header for tab screens.
  *
- * Usage: render as the first child of a SafeAreaView (after the safe-area inset
- * is already applied), before the ScrollView or content container.
+ * Fixed height of 74px keeps tab switching smooth — no layout recalculation
+ * as screens transition in/out. The explicit height prevents the profile
+ * button or title font from ever causing a layout shift.
  *
+ * Usage:
  *   <SafeAreaView edges={['top']}>
  *     <PageTopBar title="Training Programs" />
  *     <ScrollView>…</ScrollView>
  *   </SafeAreaView>
  */
-export function PageTopBar({
+export const PageTopBar = React.memo(function PageTopBar({
   title,
   showProfile = true,
   rightSlot,
@@ -30,18 +32,18 @@ export function PageTopBar({
   return (
     <View
       style={{
+        height: 74,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 30,
       }}
     >
       <AppText
         variant="heading"
         weight="bold"
         style={{ flex: 1, marginRight: 8 }}
+        numberOfLines={1}
       >
         {title}
       </AppText>
@@ -49,4 +51,4 @@ export function PageTopBar({
       {rightSlot ?? (showProfile ? <ProfileButton /> : null)}
     </View>
   );
-}
+});

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
@@ -14,10 +15,10 @@ import { colors } from '@/theme';
 // ─── Phase visuals ────────────────────────────────────────────────────────────
 
 const PHASE_COLORS: Record<string, string> = {
-  INHALE:  '#3BBFAD',
-  HOLD:    '#D4915A',
-  EXHALE:  '#5A8FBF',
-  REST:    '#6B9490',
+  INHALE: '#3BBFAD',
+  HOLD:   '#D4915A',
+  EXHALE: '#5A8FBF',
+  REST:   '#6B9490',
 };
 
 type RunState = 'idle' | 'running' | 'paused' | 'done';
@@ -36,6 +37,7 @@ function formatTime(seconds: number) {
 
 export function TrainingRunScreen() {
   const { t } = useTranslation('tabs');
+  const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     id: string;
     name: string;
@@ -59,7 +61,6 @@ export function TrainingRunScreen() {
   const currentStep = steps[stepIndex];
   const phaseColor = PHASE_COLORS[currentStep?.phase ?? 'REST'] ?? colors.accent;
 
-  // Phase label
   const phaseLabel: Record<string, string> = {
     INHALE: t('train_phase_inhale'),
     HOLD:   t('train_phase_hold'),
@@ -84,18 +85,24 @@ export function TrainingRunScreen() {
           completed,
           totalSeconds: elapsedRef.current,
         });
+
+        // Immediately refresh the Results tab — both summary and any
+        // program/training-level detail queries that might be cached.
+        queryClient.invalidateQueries({ queryKey: ['results'] });
       } catch {
-        // Non-fatal — session still ends gracefully
+        // Non-fatal: user still sees the done state.
+        // Most common reason is the user being a guest (no auth token);
+        // silently skipping is correct behaviour in that case.
       }
     },
-    [trainingId],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trainingId, queryClient],
   );
 
   const advance = useCallback(() => {
     setStepIndex((prev) => {
       const next = prev + 1;
       if (next >= steps.length) {
-        // Done
         stopInterval();
         setRunState('done');
         saveRun(true);
@@ -112,7 +119,6 @@ export function TrainingRunScreen() {
     intervalRef.current = setInterval(() => {
       elapsedRef.current += 1;
       setElapsed((e) => e + 1);
-
       setTimeLeft((t) => {
         if (t <= 1) {
           advance();
@@ -154,12 +160,7 @@ export function TrainingRunScreen() {
   const isRunning = runState === 'running';
   const isPaused = runState === 'paused';
 
-  // Step progress bar
   const progress = steps.length > 0 ? (stepIndex + 1) / steps.length : 0;
-  const stepTimeProgress =
-    currentStep && currentStep.durationSeconds > 0
-      ? 1 - timeLeft / currentStep.durationSeconds
-      : 0;
 
   return (
     <SafeAreaView className="flex-1 bg-brand-bg" edges={['top', 'bottom']}>
@@ -214,7 +215,7 @@ export function TrainingRunScreen() {
       {/* Main area */}
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
         {isDone ? (
-          // ── Done state ──────────────────────────────────────────────────────
+          // ── Done state ──────────────────────────────────────────────
           <View style={{ alignItems: 'center' }}>
             <View
               style={{
@@ -229,18 +230,22 @@ export function TrainingRunScreen() {
             >
               <LiIcon name="check-circle-1" size={44} color={colors.accent} />
             </View>
-            <AppText variant="heading" weight="bold" style={{ marginBottom: 8, fontSize: 28 }}>
+            <AppText
+              variant="heading"
+              weight="bold"
+              style={{ marginBottom: 8, fontSize: 28, textAlign: 'center' }}
+            >
               {t('train_run_done')}
             </AppText>
             <AppText secondary style={{ marginBottom: 4 }}>
               {formatTime(elapsed)}
             </AppText>
             <AppText variant="caption" muted>
-              {steps.length} {t('train_phase_inhale').toLowerCase()} steps completed
+              {steps.length} steps completed
             </AppText>
           </View>
         ) : (
-          // ── Active state ────────────────────────────────────────────────────
+          // ── Active / idle state ──────────────────────────────────────
           <>
             {/* Phase ring */}
             <View
@@ -256,7 +261,7 @@ export function TrainingRunScreen() {
               }}
             >
               {isIdle ? (
-                <AppText variant="caption" muted style={{ textAlign: 'center' }}>
+                <AppText variant="caption" muted style={{ textAlign: 'center', paddingHorizontal: 20 }}>
                   {t('train_run_tap_to_start')}
                 </AppText>
               ) : (
@@ -274,17 +279,14 @@ export function TrainingRunScreen() {
               )}
             </View>
 
-            {/* Step indicator */}
+            {/* Step counter */}
             {!isIdle && (
               <AppText variant="caption" muted style={{ marginBottom: 16 }}>
-                {t('train_run_step', {
-                  current: stepIndex + 1,
-                  total: steps.length,
-                })}
+                {t('train_run_step', { current: stepIndex + 1, total: steps.length })}
               </AppText>
             )}
 
-            {/* Step timeline dots */}
+            {/* Step dots */}
             <View
               style={{
                 flexDirection: 'row',
@@ -393,7 +395,6 @@ export function TrainingRunScreen() {
             </Pressable>
           </>
         ) : (
-          // Running
           <>
             <Pressable
               onPress={handlePause}

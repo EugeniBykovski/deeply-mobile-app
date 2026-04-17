@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
 
-import { LoadingView } from '@/shared/components/LoadingView';
 import { ErrorView } from '@/shared/components/ErrorView';
 import { EmptyView } from '@/shared/components/EmptyView';
+import { SkeletonRow } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { PageTopBar } from '@/shared/components/PageTopBar';
 
@@ -30,7 +30,11 @@ export function DiveScreen() {
       <PageTopBar title={t('dive_title')} />
 
       {query.isLoading ? (
-        <LoadingView fullScreen />
+        <View style={{ paddingHorizontal: 16, gap: 10 }}>
+          {Array.from({ length: 8 }, (_, i) => (
+            <SkeletonRow key={i} badge />
+          ))}
+        </View>
       ) : query.isError ? (
         <ErrorView
           fullScreen

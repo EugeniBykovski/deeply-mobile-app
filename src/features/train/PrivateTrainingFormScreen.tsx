@@ -14,10 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { trainService } from '@/api/services/train.service';
+import { useAuthStore } from '@/store/authStore';
 import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
 
@@ -36,11 +39,25 @@ function buildSteps(
     { phase: 'EXHALE', durationSeconds: exhaleSec },
     ...(restSec > 0 ? [{ phase: 'REST' as const, durationSeconds: restSec }] : []),
   ];
+
   const steps: TrainingStep[] = [];
-  for (let i = 0; i < pointCount && steps.length < pointCount; i++) {
-    steps.push(...cycle.slice(0, Math.min(cycle.length, pointCount - steps.length)));
+  let cycleIndex = 0;
+  while (steps.length < pointCount) {
+    const step = cycle[cycleIndex % cycle.length];
+    steps.push({ ...step });
+    cycleIndex++;
   }
   return steps;
+}
+
+function extractErrorMessage(err: unknown): string | null {
+  const axiosErr = err as AxiosError<{ message?: string | string[] }>;
+  const status = axiosErr?.response?.status;
+  if (status === 401 || status === 403) return null; // handled by caller
+  const msg = axiosErr?.response?.data?.message;
+  if (Array.isArray(msg)) return msg.join('\n');
+  if (typeof msg === 'string') return msg;
+  return null;
 }
 
 // ─── Number stepper ───────────────────────────────────────────────────────────
@@ -151,6 +168,8 @@ function ToggleRow({
 
 export function PrivateTrainingFormScreen() {
   const { t } = useTranslation('tabs');
+  const { isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const [name, setName] = useState('');
   const [pointCount, setPointCount] = useState(8);
@@ -171,6 +190,22 @@ export function PrivateTrainingFormScreen() {
       return;
     }
 
+    // Guard: private trainings require an authenticated session
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Sign in required',
+        'Creating a personal training requires a Deeply account. Sign in to continue.',
+        [
+          { text: t('cancel', { ns: 'common' }), style: 'cancel' },
+          {
+            text: 'Sign in',
+            onPress: () => router.push('/signin' as any),
+          },
+        ],
+      );
+      return;
+    }
+
     const steps = buildSteps(inhaleSec, holdSec, exhaleSec, restSec, pointCount);
 
     setIsSubmitting(true);
@@ -185,7 +220,10 @@ export function PrivateTrainingFormScreen() {
         steps,
       });
 
-      // Navigate to run with the newly created training
+      // Invalidate private training list and results so they reflect the new entry
+      queryClient.invalidateQueries({ queryKey: ['results'] });
+
+      // Navigate to run screen with the newly created training
       router.replace({
         pathname: '/train/run',
         params: {
@@ -195,11 +233,24 @@ export function PrivateTrainingFormScreen() {
           estimatedMinutes: '0',
         },
       } as any);
-    } catch {
-      Alert.alert(
-        t('error_generic', { ns: 'common' }),
-        t('error_connection', { ns: 'common' }),
-      );
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string | string[] }>;
+      const status = axiosErr?.response?.status;
+
+      if (status === 401 || status === 403) {
+        Alert.alert('Session expired', 'Please sign in again to create a training.');
+      } else if (status === 400) {
+        const detail = extractErrorMessage(err);
+        Alert.alert(
+          t('error_generic', { ns: 'common' }),
+          detail ?? 'Please check your training details and try again.',
+        );
+      } else {
+        Alert.alert(
+          t('error_generic', { ns: 'common' }),
+          t('error_connection', { ns: 'common' }),
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -236,6 +287,29 @@ export function PrivateTrainingFormScreen() {
           </AppText>
         </View>
 
+        {/* Guest notice */}
+        {!isAuthenticated && (
+          <View
+            style={{
+              marginHorizontal: 20,
+              marginBottom: 12,
+              padding: 12,
+              backgroundColor: `${colors.warning}18`,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: `${colors.warning}44`,
+              flexDirection: 'row',
+              gap: 10,
+              alignItems: 'center',
+            }}
+          >
+            <LiIcon name="lock" size={16} color={colors.warning} />
+            <AppText variant="caption" style={{ color: colors.warning, flex: 1, lineHeight: 18 }}>
+              Saving a training requires signing in with Apple.
+            </AppText>
+          </View>
+        )}
+
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
@@ -263,6 +337,7 @@ export function PrivateTrainingFormScreen() {
                 fontSize: 16,
               }}
               maxLength={80}
+              returnKeyType="done"
             />
           </View>
 
@@ -287,7 +362,7 @@ export function PrivateTrainingFormScreen() {
             />
           </View>
 
-          {/* Durations section */}
+          {/* Phase durations */}
           <AppText variant="label" muted>
             Phase durations (seconds)
           </AppText>
@@ -322,7 +397,7 @@ export function PrivateTrainingFormScreen() {
             />
           </View>
 
-          {/* Options section */}
+          {/* Options */}
           <AppText variant="label" muted>
             Options
           </AppText>
@@ -340,11 +415,7 @@ export function PrivateTrainingFormScreen() {
               value={saveResults}
               onChange={setSaveResults}
             />
-            <ToggleRow
-              label={t('train_save_co2')}
-              value={saveCO2}
-              onChange={setSaveCO2}
-            />
+            <ToggleRow label={t('train_save_co2')} value={saveCO2} onChange={setSaveCO2} />
             <ToggleRow
               label={t('train_only_clock')}
               value={onlyClock}
@@ -367,8 +438,8 @@ export function PrivateTrainingFormScreen() {
               Preview
             </AppText>
             <AppText secondary>
-              {pointCount} steps × {repeats} repeat{repeats !== 1 ? 's' : ''} ·{' '}
-              {inhaleSec}s inhale
+              {pointCount} steps{repeats > 1 ? ` × ${repeats} repeats` : ''} · {inhaleSec}s
+              inhale
               {holdSec > 0 ? ` · ${holdSec}s hold` : ''}
               {` · ${exhaleSec}s exhale`}
               {restSec > 0 ? ` · ${restSec}s rest` : ''}
