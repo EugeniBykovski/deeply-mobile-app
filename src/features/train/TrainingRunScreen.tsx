@@ -294,10 +294,11 @@ export function TrainingRunScreen() {
   const [timeLeft,  setTimeLeft]  = useState(steps[0]?.durationSeconds ?? 0);
   const [elapsed,   setElapsed]   = useState(0);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedRef  = useRef(0);
-  const isSavingRef = useRef(false);
-  const runIdRef    = useRef<string | null>(null);
+  const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef       = useRef(0);
+  const isSavingRef      = useRef(false);
+  const runIdRef         = useRef<string | null>(null);
+  const pendingFinishRef = useRef(false);
 
   const currentStep = steps[stepIndex];
   const phaseColor  = PHASE_COLORS[currentStep?.phase ?? 'REST'] ?? colors.accent;
@@ -421,13 +422,22 @@ export function TrainingRunScreen() {
       if (next >= steps.length) {
         stopInterval();
         setRunState('done');
-        finishRun(true);
+        pendingFinishRef.current = true;
         return prev;
       }
       setTimeLeft(steps[next].durationSeconds);
       return next;
     });
-  }, [steps, stopInterval, finishRun]);
+  }, [steps, stopInterval]);
+
+  // Call finishRun outside of a state-updater callback to avoid
+  // "update while rendering" errors from the Zustand store update.
+  useEffect(() => {
+    if (runState === 'done' && pendingFinishRef.current) {
+      pendingFinishRef.current = false;
+      finishRun(true);
+    }
+  }, [runState, finishRun]);
 
   useEffect(() => {
     if (runState !== 'running') return;
