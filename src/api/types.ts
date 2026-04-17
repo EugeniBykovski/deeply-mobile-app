@@ -180,6 +180,18 @@ export interface ResultsSummary {
   };
 }
 
+// ─── Recent activity ──────────────────────────────────────────────────────────
+
+export interface RecentRunItem {
+  id: string;
+  type: 'training' | 'dive';
+  startedAt: string;
+  completed: boolean;
+  title: string;
+  /** For training: totalSeconds elapsed. For dive: holdSeconds. */
+  totalSeconds: number | null;
+}
+
 // ─── Dive ─────────────────────────────────────────────────────────────────────
 
 export interface DiveProfilePoint {

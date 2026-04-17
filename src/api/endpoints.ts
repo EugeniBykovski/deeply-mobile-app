@@ -29,11 +29,13 @@ export const endpoints = {
     training: (slug: string) => `/train/trainings/${slug}`,
     private: '/train/private',
     runs: '/train/runs',
+    run: (id: string) => `/train/runs/${id}`,
   },
 
   // Results
   results: {
     summary: '/results/summary',
+    recent: '/results/recent',
     training: (slug: string) => `/results/training/${slug}`,
     program: (slug: string) => `/results/program/${slug}`,
     private: (id: string) => `/results/private/${id}`,

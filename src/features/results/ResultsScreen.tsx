@@ -3,7 +3,9 @@ import { ScrollView, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from 'expo-router';
+import { i18n } from '@/i18n';
 
 import { ErrorView } from '@/shared/components/ErrorView';
 import { Skeleton, SkeletonRow, SkeletonStatRow } from '@/shared/components/Skeleton';
@@ -13,8 +15,36 @@ import { PageTopBar } from '@/shared/components/PageTopBar';
 
 import { useAuthStore } from '@/store/authStore';
 import { resultsService } from '@/api/services/results.service';
-import type { ResultsSummary } from '@/api/types';
+import type { ResultsSummary, RecentRunItem } from '@/api/types';
 import { colors } from '@/theme';
+
+// ─── Achievement labels ───────────────────────────────────────────────────────
+
+const ACHIEVEMENT_LABELS: Record<string, string> = {
+  FIRST_TRAINING:   'First Session',
+  FIRST_PRIVATE:    'First Custom Training',
+  STREAK_3:         '3-Day Streak',
+  STREAK_7:         '7-Day Streak',
+  STREAK_30:        '30-Day Streak',
+  TOTAL_RUNS_25:    '25 Sessions Completed',
+  TOTAL_RUNS_50:    '50 Sessions Completed',
+  TOTAL_RUNS_100:   '100 Sessions Completed',
+  COMPLETE_MAIN_12: 'Completed 12-Session Path',
+};
+
+const ACHIEVEMENT_ICONS: Record<string, string> = {
+  FIRST_TRAINING:   'checkmark-circle-fill',
+  FIRST_PRIVATE:    'bolt',
+  STREAK_3:         'flame',
+  STREAK_7:         'flame',
+  STREAK_30:        'flame',
+  TOTAL_RUNS_25:    'trend-up-1',
+  TOTAL_RUNS_50:    'trend-up-1',
+  TOTAL_RUNS_100:   'trend-up-1',
+  COMPLETE_MAIN_12: 'checkmark',
+};
+
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 function useResultsSummary() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -22,7 +52,20 @@ function useResultsSummary() {
     queryKey: ['results', 'summary'],
     queryFn: () => resultsService.getSummary(),
     enabled: isAuthenticated,
-    retry: false,
+    staleTime: 0,
+    retry: 1,
+  });
+}
+
+function useRecentRuns() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
+  return useQuery({
+    queryKey: ['results', 'recent', lang],
+    queryFn: () => resultsService.getRecentRuns({ lang }),
+    enabled: isAuthenticated,
+    staleTime: 0,
+    retry: 1,
   });
 }
 
@@ -30,14 +73,104 @@ function useResultsSummary() {
 
 function StatCard({ value, label }: { value: number | string; label: string }) {
   return (
-    <View className="flex-1 bg-brand-surface border border-brand-border rounded-brand-lg p-4 items-center">
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 16,
+        padding: 16,
+        alignItems: 'center',
+        gap: 4,
+      }}
+    >
       <AppText variant="title" weight="bold" accent>
         {value}
       </AppText>
-      <AppText variant="caption" secondary className="mt-1 text-center">
+      <AppText variant="caption" secondary style={{ textAlign: 'center' }}>
         {label}
       </AppText>
     </View>
+  );
+}
+
+// ─── Recent run row ───────────────────────────────────────────────────────────
+
+function formatSeconds(s: number | null): string {
+  if (!s || s <= 0) return '';
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  if (m > 0 && sec > 0) return `${m}m ${sec}s`;
+  if (m > 0) return `${m}m`;
+  return `${sec}s`;
+}
+
+function RecentRunRow({ item }: { item: RecentRunItem }) {
+  const statusColor = item.completed ? '#3BBFAD' : '#D4915A';
+  const iconName    = item.completed ? 'checkmark-circle-fill' : 'clock-fill';
+  const typeIcon    = item.type === 'dive' ? 'water-drop-1' : 'stopwatch';
+  const duration    = formatSeconds(item.totalSeconds);
+
+  const date = new Date(item.startedAt);
+  const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const formattedTime = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: item.completed ? `${statusColor}30` : colors.border,
+        borderRadius: 14,
+        padding: 14,
+      }}
+    >
+      {/* Type badge */}
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 11,
+          backgroundColor: `${statusColor}15`,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <LiIcon name={typeIcon} size={17} color={statusColor} />
+      </View>
+
+      {/* Info */}
+      <View style={{ flex: 1 }}>
+        <AppText weight="medium" numberOfLines={1}>
+          {item.title}
+        </AppText>
+        <AppText variant="caption" muted style={{ marginTop: 2 }}>
+          {formattedDate} · {formattedTime}{duration ? ` · ${duration}` : ''}
+        </AppText>
+      </View>
+
+      {/* Status icon */}
+      <LiIcon name={iconName} size={20} color={statusColor} />
+    </View>
+  );
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <AppText
+      variant="heading"
+      weight="semibold"
+      style={{ marginBottom: 12, marginTop: 4 }}
+    >
+      {title}
+    </AppText>
   );
 }
 
@@ -46,22 +179,22 @@ function StatCard({ value, label }: { value: number | string; label: string }) {
 function EmptyResultsState() {
   const { t } = useTranslation('tabs');
   return (
-    <View className="flex-1 items-center justify-center px-8 gap-6 py-20">
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 80, gap: 16 }}>
       <View
         style={{
           width: 72,
           height: 72,
           borderRadius: 36,
-          backgroundColor: 'rgba(59,191,173,0.08)',
+          backgroundColor: `${colors.accent}12`,
           borderWidth: 1,
-          borderColor: 'rgba(59,191,173,0.25)',
+          borderColor: `${colors.accent}30`,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
         <LiIcon name="trend-up-1" size={30} color={colors.accent} />
       </View>
-      <AppText secondary className="text-center leading-relaxed">
+      <AppText secondary style={{ textAlign: 'center', lineHeight: 22 }}>
         {t('results_empty_hint')}
       </AppText>
     </View>
@@ -73,145 +206,158 @@ function EmptyResultsState() {
 export function ResultsScreen() {
   const { t } = useTranslation('tabs');
   const { isAuthenticated } = useAuthStore();
-  const query = useResultsSummary();
+  const queryClient = useQueryClient();
 
-  const handleRefresh = useCallback(() => query.refetch(), [query]);
+  const summaryQuery = useResultsSummary();
+  const recentQuery  = useRecentRuns();
 
-  const summary = query.data as ResultsSummary | undefined;
+  // Refresh when the tab gains focus (e.g. after completing a training).
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      queryClient.invalidateQueries({ queryKey: ['results'] });
+    }, [isAuthenticated, queryClient]),
+  );
+
+  const handleRefresh = useCallback(() => {
+    summaryQuery.refetch();
+    recentQuery.refetch();
+  }, [summaryQuery, recentQuery]);
+
+  const summary    = summaryQuery.data as ResultsSummary | undefined;
+  // Recent query failure is non-fatal — show whatever we have.
+  const recentRuns = recentQuery.data ?? [];
+
+  const isLoading  = summaryQuery.isLoading;
+  // Only show a hard error if the primary summary query fails.
+  const isError    = summaryQuery.isError;
+  const isFetching = (summaryQuery.isFetching || recentQuery.isFetching) && !isLoading;
+
+  const hasAnyData = !!summary || recentRuns.length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <StatusBar style="light" />
 
-      {/* Inline page header — stays visible during loading/error/empty */}
       <PageTopBar title={t('results_title')} />
 
-      {/* Body */}
       {!isAuthenticated ? (
         <EmptyResultsState />
-      ) : query.isLoading ? (
+      ) : isLoading ? (
         <View style={{ paddingHorizontal: 20, gap: 16, paddingTop: 4 }}>
           <SkeletonStatRow />
           <Skeleton width="40%" height={18} />
           <View style={{ gap: 10 }}>
-            {Array.from({ length: 3 }, (_, i) => (
-              <SkeletonRow key={i} badge />
-            ))}
+            {Array.from({ length: 5 }, (_, i) => <SkeletonRow key={i} badge />)}
           </View>
           <Skeleton width="40%" height={18} />
           <View style={{ gap: 10 }}>
-            {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton key={i} height={64} />
-            ))}
+            {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={64} />)}
           </View>
         </View>
-      ) : query.isError ? (
+      ) : isError ? (
         <ErrorView
           fullScreen
           message={t('error_connection', { ns: 'common' })}
           onRetry={handleRefresh}
         />
-      ) : !summary ? (
+      ) : !hasAnyData ? (
         <EmptyResultsState />
       ) : (
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 }}
           refreshControl={
             <RefreshControl
-              refreshing={query.isFetching && !query.isLoading}
+              refreshing={isFetching}
               onRefresh={handleRefresh}
               tintColor={colors.accent}
               colors={[colors.accent]}
             />
           }
         >
-          {/* Overall stats */}
-          <View className="flex-row gap-3 px-5 pt-2 mb-6">
-            <StatCard value={summary.overall.totalRuns} label={t('results_total_runs')} />
-            <StatCard value={summary.overall.currentStreakDays} label={t('results_streak')} />
-          </View>
+          {/* ── Overall stats ── */}
+          {summary && (
+            <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 8, marginBottom: 24 }}>
+              <StatCard value={summary.overall.totalRuns}        label={t('results_total_runs')} />
+              <StatCard value={summary.overall.currentStreakDays} label={t('results_streak')} />
+            </View>
+          )}
 
-          {/* Achievements */}
-          <View className="px-5 mb-6">
-            <AppText variant="heading" weight="semibold" className="mb-3">
-              {t('results_achievements')}
-            </AppText>
-            {summary.achievements.length === 0 ? (
-              <View className="bg-brand-surface border border-brand-border rounded-brand-lg p-5 items-center">
-                <AppText secondary className="text-center">
-                  {t('results_no_achievements')}
+          {/* ── Recent activity ── */}
+          <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+            <SectionHeader title={t('results_recent')} />
+            {recentRuns.length === 0 ? (
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 14,
+                  padding: 20,
+                  alignItems: 'center',
+                }}
+              >
+                <AppText secondary style={{ textAlign: 'center' }}>
+                  {t('results_no_recent')}
                 </AppText>
               </View>
             ) : (
-              <View className="gap-2">
-                {summary.achievements.map((a, i) => (
-                  <View
-                    key={i}
-                    className="flex-row items-center gap-3 bg-brand-surface border border-brand-border rounded-brand-lg p-4"
-                  >
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: 'rgba(59,191,173,0.12)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <LiIcon name="trend-up-1" size={18} color={colors.accent} />
-                    </View>
-                    <View className="flex-1">
-                      <AppText weight="medium">
-                        {a.type.replace(/_/g, ' ')}
-                      </AppText>
-                      <AppText variant="caption" muted>
-                        {new Date(a.unlockedAt).toLocaleDateString()}
-                      </AppText>
-                    </View>
-                  </View>
+              <View style={{ gap: 8 }}>
+                {recentRuns.map((item) => (
+                  <RecentRunRow key={item.id} item={item} />
                 ))}
               </View>
             )}
           </View>
 
-          {/* Program progress */}
-          {summary.programs.length > 0 && (
-            <View className="px-5 mb-6">
-              <AppText variant="heading" weight="semibold" className="mb-3">
-                {t('results_programs')}
-              </AppText>
-              <View className="gap-2">
+          {/* ── Program progress ── */}
+          {summary && summary.programs.length > 0 && (
+            <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+              <SectionHeader title={t('results_programs')} />
+              <View style={{ gap: 8 }}>
                 {summary.programs.map((prog) => {
-                  const pct =
-                    prog.mainTotal > 0
-                      ? Math.round((prog.completedMain / prog.mainTotal) * 100)
-                      : 0;
+                  const pct = prog.mainTotal > 0
+                    ? Math.round((prog.completedMain / prog.mainTotal) * 100)
+                    : 0;
                   return (
                     <View
                       key={prog.key}
-                      className="bg-brand-surface border border-brand-border rounded-brand-lg p-4"
+                      style={{
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 14,
+                        padding: 16,
+                      }}
                     >
-                      <View className="flex-row justify-between mb-2">
-                        <AppText weight="medium">{prog.title}</AppText>
-                        <AppText variant="caption" accent>{pct}%</AppText>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <AppText weight="medium" style={{ flex: 1 }}>{prog.title}</AppText>
+                        <AppText variant="caption" accent style={{ marginLeft: 8 }}>{pct}%</AppText>
                       </View>
                       <View
-                        className="rounded-full overflow-hidden"
-                        style={{ height: 4, backgroundColor: colors.border }}
+                        style={{
+                          height: 5,
+                          backgroundColor: colors.border,
+                          borderRadius: 3,
+                          overflow: 'hidden',
+                        }}
                       >
                         <View
                           style={{
                             width: `${pct}%`,
-                            height: 4,
-                            backgroundColor: colors.accent,
-                            borderRadius: 2,
+                            height: '100%',
+                            backgroundColor: pct === 100 ? '#3BBFAD' : colors.accent,
+                            borderRadius: 3,
                           }}
                         />
                       </View>
-                      <AppText variant="caption" muted className="mt-1.5">
-                        {prog.completedMain}/{prog.mainTotal} sessions
+                      <AppText variant="caption" muted style={{ marginTop: 8 }}>
+                        {prog.completedMain} / {prog.mainTotal} {t('results_sessions')}
+                        {prog.completedTotal > prog.completedMain
+                          ? `  ·  ${prog.completedTotal} ${t('results_total_done')}`
+                          : ''}
                       </AppText>
                     </View>
                   );
@@ -220,33 +366,122 @@ export function ResultsScreen() {
             </View>
           )}
 
-          {/* Private trainings */}
-          {summary.privateTrainings.length > 0 && (
-            <View className="px-5 mb-6">
-              <AppText variant="heading" weight="semibold" className="mb-3">
-                {t('results_private')}
-              </AppText>
-              <View className="gap-2">
+          {/* ── Achievements ── */}
+          {summary && (
+            <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+              <SectionHeader title={t('results_achievements')} />
+              {summary.achievements.length === 0 ? (
+                <View
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 14,
+                    padding: 20,
+                    alignItems: 'center',
+                  }}
+                >
+                  <AppText secondary style={{ textAlign: 'center' }}>
+                    {t('results_no_achievements')}
+                  </AppText>
+                </View>
+              ) : (
+                <View style={{ gap: 8 }}>
+                  {summary.achievements.map((a, i) => (
+                    <View
+                      key={i}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: `${colors.accent}25`,
+                        borderRadius: 14,
+                        padding: 14,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 11,
+                          backgroundColor: `${colors.accent}18`,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <LiIcon
+                          name={ACHIEVEMENT_ICONS[a.type] ?? 'checkmark'}
+                          size={18}
+                          color={colors.accent}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <AppText weight="medium">
+                          {ACHIEVEMENT_LABELS[a.type] ?? a.type.replace(/_/g, ' ')}
+                        </AppText>
+                        <AppText variant="caption" muted style={{ marginTop: 2 }}>
+                          {new Date(a.unlockedAt).toLocaleDateString(undefined, {
+                            month: 'short', day: 'numeric', year: 'numeric',
+                          })}
+                        </AppText>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── My custom trainings ── */}
+          {summary && summary.privateTrainings.length > 0 && (
+            <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
+              <SectionHeader title={t('results_private')} />
+              <View style={{ gap: 8 }}>
                 {summary.privateTrainings.map((pt) => (
                   <View
                     key={pt.id}
-                    className="flex-row items-center gap-3 bg-brand-surface border border-brand-border rounded-brand-lg p-4"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      backgroundColor: colors.surface,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 14,
+                      padding: 14,
+                    }}
                   >
-                    <View className="flex-1">
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 11,
+                        backgroundColor: `${colors.accent}15`,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <LiIcon name="bolt" size={17} color={colors.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
                       <AppText weight="medium">{pt.name}</AppText>
-                      <AppText variant="caption" muted className="mt-0.5">
-                        {pt.runsCount} runs
-                        {pt.bestTotalSeconds != null &&
-                          ` · Best: ${Math.floor(pt.bestTotalSeconds / 60)}m ${pt.bestTotalSeconds % 60}s`}
+                      <AppText variant="caption" muted style={{ marginTop: 2 }}>
+                        {pt.runsCount} {t('results_runs')}
+                        {pt.bestTotalSeconds != null
+                          ? `  ·  ${t('results_best')}: ${formatSeconds(pt.bestTotalSeconds)}`
+                          : ''}
                       </AppText>
                     </View>
+                    {pt.runsCount > 0 && (
+                      <LiIcon name="checkmark-circle-fill" size={18} color="#3BBFAD" />
+                    )}
                   </View>
                 ))}
               </View>
             </View>
           )}
-
-          <View className="h-8" />
         </ScrollView>
       )}
     </SafeAreaView>

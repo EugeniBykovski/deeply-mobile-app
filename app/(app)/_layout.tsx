@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Platform } from 'react-native';
-import { Tabs } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
-import { LiIcon } from '@/shared/components/LiIcon';
-import { colors } from '@/theme';
+import React from "react";
+import { View, Platform } from "react-native";
+import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import { LiIcon } from "@/shared/components/LiIcon";
+import { colors } from "@/theme";
 
 // ─── Tab icon — icon + accent dot, no text labels ─────────────────────────────
 //
@@ -15,7 +15,7 @@ import { colors } from '@/theme';
 function TabIcon({ liIcon, focused }: { liIcon: string; focused: boolean }) {
   const tintColor = focused ? colors.accent : colors.inkMuted;
   return (
-    <View style={{ alignItems: 'center', gap: 5, paddingTop: 8 }}>
+    <View style={{ alignItems: "center", gap: 5, paddingTop: 8 }}>
       <LiIcon name={liIcon} size={24} color={tintColor} />
       <View
         style={{
@@ -32,11 +32,12 @@ function TabIcon({ liIcon, focused }: { liIcon: string; focused: boolean }) {
 // ─── Tab layout ──────────────────────────────────────────────────────────────
 
 export default function AppTabLayout() {
-  const { t } = useTranslation('tabs');
+  const { t } = useTranslation("tabs");
   const insets = useSafeAreaInsets();
 
-  const tabBarContentHeight = 50;
-  const tabBarHeight = tabBarContentHeight + (Platform.OS === 'ios' ? insets.bottom : 0);
+  const tabBarContentHeight = 60;
+  const tabBarHeight =
+    tabBarContentHeight + (Platform.OS === "ios" ? insets.bottom : 0);
 
   return (
     <Tabs
@@ -45,11 +46,11 @@ export default function AppTabLayout() {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopWidth: 1,
+          borderTopWidth: 0.5,
           borderTopColor: colors.border,
           height: tabBarHeight,
-          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 4,
-          paddingTop: 0,
+          paddingBottom: Platform.OS === "ios" ? insets.bottom : 4,
+          paddingTop: 10,
           elevation: 0,
           shadowOpacity: 0,
         },
@@ -62,29 +63,37 @@ export default function AppTabLayout() {
       <Tabs.Screen
         name="train/index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon liIcon="surfboard-2" focused={focused} />,
-          tabBarAccessibilityLabel: t('train'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon liIcon="surfboard-2" focused={focused} />
+          ),
+          tabBarAccessibilityLabel: t("train"),
         }}
       />
       <Tabs.Screen
         name="dive/index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon liIcon="stopwatch" focused={focused} />,
-          tabBarAccessibilityLabel: t('dive'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon liIcon="stopwatch" focused={focused} />
+          ),
+          tabBarAccessibilityLabel: t("dive"),
         }}
       />
       <Tabs.Screen
         name="results/index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon liIcon="trend-up-1" focused={focused} />,
-          tabBarAccessibilityLabel: t('results'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon liIcon="trend-up-1" focused={focused} />
+          ),
+          tabBarAccessibilityLabel: t("results"),
         }}
       />
       <Tabs.Screen
         name="culture/index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon liIcon="books-2" focused={focused} />,
-          tabBarAccessibilityLabel: t('culture'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon liIcon="books-2" focused={focused} />
+          ),
+          tabBarAccessibilityLabel: t("culture"),
         }}
       />
     </Tabs>

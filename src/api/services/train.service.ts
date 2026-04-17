@@ -64,7 +64,18 @@ export const trainService = {
     return data;
   },
 
-  saveRun: async (payload: CreateTrainingRunPayload): Promise<void> => {
-    await apiClient.post(endpoints.train.runs, payload);
+  saveRun: async (payload: CreateTrainingRunPayload): Promise<{ id: string; startedAt: string }> => {
+    const { data } = await apiClient.post<{ id: string; startedAt: string }>(
+      endpoints.train.runs,
+      payload,
+    );
+    return data;
+  },
+
+  updateRun: async (
+    runId: string,
+    payload: { completed?: boolean; totalSeconds?: number; metrics?: Record<string, unknown> },
+  ): Promise<void> => {
+    await apiClient.patch(endpoints.train.run(runId), payload);
   },
 };

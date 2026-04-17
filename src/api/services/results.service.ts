@@ -1,10 +1,18 @@
 import { apiClient } from '../client';
 import { endpoints } from '../endpoints';
-import type { ResultsSummary } from '../types';
+import type { ResultsSummary, RecentRunItem } from '../types';
 
 export type ResultsRange = 'week' | 'month' | 'all';
 
 export const resultsService = {
+  getRecentRuns: async (params?: { lang?: string }): Promise<RecentRunItem[]> => {
+    const { data } = await apiClient.get<RecentRunItem[]>(
+      endpoints.results.recent,
+      { params },
+    );
+    return data;
+  },
+
   getSummary: async (params?: { lang?: string }): Promise<ResultsSummary> => {
     const { data } = await apiClient.get<ResultsSummary>(
       endpoints.results.summary,

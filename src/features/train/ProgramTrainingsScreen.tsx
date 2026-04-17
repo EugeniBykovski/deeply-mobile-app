@@ -301,10 +301,28 @@ export function ProgramTrainingsScreen() {
             />
           }
           ListHeaderComponent={
-            <View style={{ marginBottom: 16 }}>
-              <AppText secondary>
-                {items.filter((i) => !i.isLocked).length} free · {items.filter((i) => i.isLocked).length} locked
-              </AppText>
+            <View style={{ marginBottom: 16, gap: 6 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {items.filter((i) => i.lastRunStatus === 'completed').length > 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <LiIcon name="checkmark-circle-fill" size={13} color="#3BBFAD" />
+                    <AppText variant="caption" style={{ color: '#3BBFAD' }}>
+                      {items.filter((i) => i.lastRunStatus === 'completed').length} done
+                    </AppText>
+                  </View>
+                )}
+                {items.filter((i) => i.lastRunStatus === 'in_progress').length > 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <LiIcon name="clock-fill" size={13} color="#D4915A" />
+                    <AppText variant="caption" style={{ color: '#D4915A' }}>
+                      {items.filter((i) => i.lastRunStatus === 'in_progress').length} in progress
+                    </AppText>
+                  </View>
+                )}
+                <AppText variant="caption" secondary>
+                  {items.filter((i) => !i.isLocked).length} free · {items.filter((i) => i.isLocked).length} locked
+                </AppText>
+              </View>
             </View>
           }
         />
