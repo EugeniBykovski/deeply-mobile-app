@@ -25,7 +25,7 @@ const { height: SCREEN_H } = Dimensions.get("window");
 const LANE_HEIGHT = SCREEN_H * 0.5;
 const DIVER_SIZE = 32;
 const TAPE_STEPS = 5;
-const BUTTON_SIZE = 140;
+const BUTTON_SIZE = 120;
 
 const SURFACE_COLOR = "#0d2d3a";
 const ABYSS_COLOR = "#030a10";
@@ -66,7 +66,7 @@ export function DiveSessionScreen() {
 
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [sessionOutcome, setSessionOutcome] = useState<SessionOutcome | null>(
-    null
+    null,
   );
   const [holdSeconds, setHoldSeconds] = useState(0);
   const [currentDepth, setCurrentDepth] = useState(0);
@@ -86,12 +86,14 @@ export function DiveSessionScreen() {
     backgroundColor: interpolateColor(
       depthProgress.value,
       [0, 1],
-      [SURFACE_COLOR, ABYSS_COLOR]
+      [SURFACE_COLOR, ABYSS_COLOR],
     ),
   }));
 
   const diverStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: depthProgress.value * (LANE_HEIGHT - DIVER_SIZE) }],
+    transform: [
+      { translateY: depthProgress.value * (LANE_HEIGHT - DIVER_SIZE) },
+    ],
   }));
 
   // Poll SharedValue → React state for depth readout + max-depth detection.
@@ -260,7 +262,11 @@ export function DiveSessionScreen() {
               className="active:opacity-60"
               style={{ marginRight: 12 }}
             >
-              <LiIcon name="arrow-left" size={22} color="rgba(255,255,255,0.7)" />
+              <LiIcon
+                name="arrow-left"
+                size={22}
+                color="rgba(255,255,255,0.7)"
+              />
             </Pressable>
           )}
           <AppText
@@ -323,7 +329,7 @@ export function DiveSessionScreen() {
               weight="bold"
               style={{
                 color: "#fff",
-                fontSize: 24,
+                fontSize: 20,
                 textAlign: "center",
                 marginBottom: 6,
               }}
@@ -353,7 +359,7 @@ export function DiveSessionScreen() {
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.1)",
                 borderRadius: 20,
-                paddingVertical: 20,
+                paddingVertical: 16,
                 paddingHorizontal: 24,
                 flexDirection: "row",
                 justifyContent: "space-around",
@@ -366,10 +372,7 @@ export function DiveSessionScreen() {
                   size={18}
                   color={isCompleted ? "#3BBFAD" : "#D4915A"}
                 />
-                <AppText
-                  weight="bold"
-                  style={{ color: "#fff", fontSize: 26 }}
-                >
+                <AppText weight="bold" style={{ color: "#fff", fontSize: 20 }}>
                   {maxReached}m
                 </AppText>
                 <AppText
@@ -393,10 +396,7 @@ export function DiveSessionScreen() {
                   size={18}
                   color="rgba(255,255,255,0.6)"
                 />
-                <AppText
-                  weight="bold"
-                  style={{ color: "#fff", fontSize: 26 }}
-                >
+                <AppText weight="bold" style={{ color: "#fff", fontSize: 20 }}>
                   {formatTime(holdSeconds)}
                 </AppText>
                 <AppText
@@ -409,7 +409,9 @@ export function DiveSessionScreen() {
 
             {/* CTA */}
             {saving ? (
-              <AppText style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>
+              <AppText
+                style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}
+              >
                 {t("dive_session_saving")}
               </AppText>
             ) : (
@@ -428,10 +430,7 @@ export function DiveSessionScreen() {
                   borderColor: "rgba(255,255,255,0.2)",
                 }}
               >
-                <AppText
-                  weight="bold"
-                  style={{ color: "#fff", fontSize: 16 }}
-                >
+                <AppText weight="bold" style={{ color: "#fff", fontSize: 16 }}>
                   {t("done", { ns: "common" })}
                 </AppText>
               </Pressable>
@@ -464,8 +463,8 @@ export function DiveSessionScreen() {
                 {isHolding
                   ? t("dive_session_descending")
                   : isSurfacing
-                  ? t("dive_session_surfacing")
-                  : t("dive_session_ready")}
+                    ? t("dive_session_surfacing")
+                    : t("dive_session_ready")}
               </AppText>
             </View>
 
@@ -491,7 +490,11 @@ export function DiveSessionScreen() {
                 {tapeMarkers.map((m) => (
                   <View
                     key={m}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
                   >
                     <View
                       style={{
@@ -570,9 +573,7 @@ export function DiveSessionScreen() {
                   <LiIcon
                     name="water-drop-1"
                     size={DIVER_SIZE}
-                    color={
-                      isHolding ? "#3BBFAD" : "rgba(255,255,255,0.7)"
-                    }
+                    color={isHolding ? "#3BBFAD" : "rgba(255,255,255,0.7)"}
                   />
                 </Animated.View>
               </View>
@@ -591,38 +592,31 @@ export function DiveSessionScreen() {
                 gap: 14,
               }}
             >
-              {/* Primary hold button — round, semi-transparent, centered */}
               <Pressable
                 onPressIn={handlePressIn}
                 onPressOut={handlePressOut}
-                style={({ pressed }) => ({
+                style={{
                   width: BUTTON_SIZE,
                   height: BUTTON_SIZE,
-                  borderRadius: BUTTON_SIZE / 2,
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 6,
-                  backgroundColor:
-                    pressed || isHolding
-                      ? "rgba(59,191,173,0.30)"
-                      : "rgba(255,255,255,0.10)",
-                  borderWidth: 1.5,
+                  gap: 4,
+                  borderRadius: 100,
+                  borderWidth: 1,
                   borderColor: isHolding
-                    ? "rgba(59,191,173,0.65)"
+                    ? "rgba(255,255,255,0.22)"
                     : "rgba(255,255,255,0.22)",
-                })}
+                }}
               >
                 <LiIcon
-                  name={isSurfacing ? "arrow-up" : "water-drop-1"}
+                  name={isSurfacing ? "water-drop-1" : "water-drop-1"}
                   size={28}
                   color={isHolding ? "#3BBFAD" : "rgba(255,255,255,0.55)"}
                 />
                 <AppText
                   weight="semibold"
                   style={{
-                    color: isHolding
-                      ? "#3BBFAD"
-                      : "rgba(255,255,255,0.55)",
+                    color: isHolding ? "#3BBFAD" : "rgba(255,255,255,0.55)",
                     fontSize: 11,
                     letterSpacing: 0.2,
                     textAlign: "center",
@@ -632,8 +626,8 @@ export function DiveSessionScreen() {
                   {isHolding
                     ? t("dive_session_release")
                     : isSurfacing
-                    ? t("dive_session_surfacing")
-                    : t("dive_session_hold")}
+                      ? t("dive_session_surfacing")
+                      : t("dive_session_hold")}
                 </AppText>
               </Pressable>
 
