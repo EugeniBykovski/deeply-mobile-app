@@ -73,7 +73,7 @@ export default function AppTabLayout() {
         name="dive/index"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon liIcon="stopwatch" focused={focused} />
+            <TabIcon liIcon="trophy" focused={focused} />
           ),
           tabBarAccessibilityLabel: t("dive"),
         }}

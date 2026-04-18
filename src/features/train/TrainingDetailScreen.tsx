@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -189,13 +189,15 @@ function SummaryChip({ label, value }: { label: string; value: string }) {
 
 export function TrainingDetailScreen() {
   const { t } = useTranslation('tabs');
-  const { trainingSlug, slug: programSlug } = useLocalSearchParams<{
+  const { trainingSlug, slug: programSlug, autoStart } = useLocalSearchParams<{
     trainingSlug: string;
     slug: string;
+    autoStart?: string;
   }>();
 
   const query = useTrainingDetail(trainingSlug ?? '');
   const training = query.data;
+  const didAutoStart = useRef(false);
 
   function handleStart() {
     if (!training) return;
@@ -211,6 +213,13 @@ export function TrainingDetailScreen() {
       },
     } as any);
   }
+
+  useEffect(() => {
+    if (autoStart === '1' && training && !didAutoStart.current) {
+      didAutoStart.current = true;
+      handleStart();
+    }
+  }, [training, autoStart]);
 
   return (
     <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -201,10 +201,11 @@ function StatPill({
 
 export function DiveDetailScreen() {
   const { t } = useTranslation("tabs");
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, autoStart } = useLocalSearchParams<{ slug: string; autoStart?: string }>();
 
   const query = useDiveTemplate(slug ?? "");
   const template = query.data as DiveTemplate | undefined;
+  const didAutoStart = useRef(false);
 
   const diffColor = template
     ? (DIFFICULTY_COLOR[template.difficulty] ?? colors.accent)
@@ -224,6 +225,13 @@ export function DiveDetailScreen() {
       },
     } as any);
   }
+
+  useEffect(() => {
+    if (autoStart === "1" && template && !didAutoStart.current) {
+      didAutoStart.current = true;
+      handleStartSession();
+    }
+  }, [template, autoStart]);
 
   return (
     <SafeAreaView

@@ -221,7 +221,7 @@ export function CultureScreen() {
               // Ensure the last article can always be scrolled fully above the
               // bottom system UI (home indicator / nav bar). The tab bar takes 60px
               // in the layout flow; insets.bottom covers any remaining system gap.
-              paddingBottom: 32 + insets.bottom,
+              paddingBottom: 32 + 60 + insets.bottom,
               gap: 16,
             }}
           >
