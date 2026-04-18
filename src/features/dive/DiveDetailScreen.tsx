@@ -1,27 +1,27 @@
-import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import React from "react";
+import { Pressable, ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 
-import { ErrorView } from '@/shared/components/ErrorView';
-import { Skeleton } from '@/shared/components/Skeleton';
-import { AppText } from '@/shared/components/AppText';
-import { LiIcon } from '@/shared/components/LiIcon';
+import { ErrorView } from "@/shared/components/ErrorView";
+import { Skeleton } from "@/shared/components/Skeleton";
+import { AppText } from "@/shared/components/AppText";
+import { LiIcon } from "@/shared/components/LiIcon";
 
-import { diveService } from '@/api/services/dive.service';
-import type { DiveTemplate } from '@/api/types';
-import { i18n } from '@/i18n';
-import { colors } from '@/theme';
+import { diveService } from "@/api/services/dive.service";
+import type { DiveTemplate } from "@/api/types";
+import { i18n } from "@/i18n";
+import { colors } from "@/theme";
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 function useDiveTemplate(slug: string) {
-  const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
+  const lang = i18n.language.startsWith("ru") ? "ru" : "en";
   return useQuery({
-    queryKey: ['dive', 'template', slug, lang],
+    queryKey: ["dive", "template", slug, lang],
     queryFn: () => diveService.getTemplate(slug, { lang }),
     enabled: !!slug,
   });
@@ -30,9 +30,9 @@ function useDiveTemplate(slug: string) {
 // ─── Difficulty helpers ───────────────────────────────────────────────────────
 
 const DIFFICULTY_COLOR: Record<string, string> = {
-  EASY:   '#3BBFAD',
-  MEDIUM: '#D4B95A',
-  HARD:   '#D4915A',
+  EASY: "#3BBFAD",
+  MEDIUM: "#D4B95A",
+  HARD: "#D4915A",
 };
 
 function formatHold(s: number): string {
@@ -49,7 +49,7 @@ function DepthProfile({ template }: { template: DiveTemplate }) {
   const points = template.profilePoints;
   if (!points.length) return null;
 
-  const maxTime  = points[points.length - 1].timeSeconds;
+  const maxTime = points[points.length - 1].timeSeconds;
   const maxDepth = template.maxDepthMeters;
   const W = 280;
   const H = 80;
@@ -72,11 +72,11 @@ function DepthProfile({ template }: { template: DiveTemplate }) {
       </AppText>
 
       {/* Simple line chart using absolute-positioned views */}
-      <View style={{ width: W, height: H, position: 'relative' }}>
+      <View style={{ width: W, height: H, position: "relative" }}>
         {/* Horizontal grid line at max depth */}
         <View
           style={{
-            position: 'absolute',
+            position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
@@ -101,9 +101,9 @@ function DepthProfile({ template }: { template: DiveTemplate }) {
             <View
               key={i}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: (x1 + x2) / 2 - len / 2,
-                top:  (y1 + y2) / 2 - 1.5,
+                top: (y1 + y2) / 2 - 1.5,
                 width: len,
                 height: 3,
                 borderRadius: 2,
@@ -123,9 +123,9 @@ function DepthProfile({ template }: { template: DiveTemplate }) {
             <View
               key={i}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 left: x - 3,
-                top:  y - 3,
+                top: y - 3,
                 width: 6,
                 height: 6,
                 borderRadius: 3,
@@ -137,12 +137,24 @@ function DepthProfile({ template }: { template: DiveTemplate }) {
       </View>
 
       {/* Axis labels */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-        <AppText variant="label" muted>0s</AppText>
-        <AppText variant="label" muted>{maxTime}s</AppText>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          marginTop: 6,
+        }}
+      >
+        <AppText variant="label" muted>
+          0s
+        </AppText>
+        <AppText variant="label" muted>
+          {maxTime}s
+        </AppText>
       </View>
-      <View style={{ position: 'absolute', right: 16, top: 16 + 4 }}>
-        <AppText variant="label" muted>{maxDepth}m</AppText>
+      <View style={{ position: "absolute", right: 16, top: 16 + 4 }}>
+        <AppText variant="label" muted>
+          {maxDepth}m
+        </AppText>
       </View>
     </View>
   );
@@ -150,7 +162,17 @@ function DepthProfile({ template }: { template: DiveTemplate }) {
 
 // ─── Stat pill ────────────────────────────────────────────────────────────────
 
-function StatPill({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
+function StatPill({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  color: string;
+}) {
   return (
     <View
       style={{
@@ -160,13 +182,17 @@ function StatPill({ icon, label, value, color }: { icon: string; label: string; 
         borderColor: colors.border,
         borderRadius: 14,
         padding: 14,
-        alignItems: 'center',
+        alignItems: "center",
         gap: 6,
       }}
     >
       <LiIcon name={icon} size={18} color={color} />
-      <AppText weight="bold" style={{ color, fontSize: 18 }}>{value}</AppText>
-      <AppText variant="caption" secondary style={{ textAlign: 'center' }}>{label}</AppText>
+      <AppText weight="bold" style={{ color, fontSize: 18 }}>
+        {value}
+      </AppText>
+      <AppText variant="caption" secondary style={{ textAlign: "center" }}>
+        {label}
+      </AppText>
     </View>
   );
 }
@@ -174,21 +200,23 @@ function StatPill({ icon, label, value, color }: { icon: string; label: string; 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function DiveDetailScreen() {
-  const { t } = useTranslation('tabs');
+  const { t } = useTranslation("tabs");
   const { slug } = useLocalSearchParams<{ slug: string }>();
 
-  const query = useDiveTemplate(slug ?? '');
+  const query = useDiveTemplate(slug ?? "");
   const template = query.data as DiveTemplate | undefined;
 
-  const diffColor = template ? (DIFFICULTY_COLOR[template.difficulty] ?? colors.accent) : colors.accent;
+  const diffColor = template
+    ? (DIFFICULTY_COLOR[template.difficulty] ?? colors.accent)
+    : colors.accent;
 
   function handleStartSession() {
     if (!template) return;
     router.push({
-      pathname: '/dive/session',
+      pathname: "/dive/session",
       params: {
         id: template.id,
-        slug: template.slug ?? '',
+        slug: template.slug ?? "",
         title: template.title,
         maxDepthMeters: String(template.maxDepthMeters),
         targetHoldSeconds: String(template.targetHoldSeconds ?? 120),
@@ -198,14 +226,17 @@ export function DiveDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      edges={["top", "bottom"]}
+    >
       <StatusBar style="light" />
 
       {/* Header */}
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
           paddingHorizontal: 16,
           paddingTop: 16,
           paddingBottom: 12,
@@ -220,7 +251,12 @@ export function DiveDetailScreen() {
           <LiIcon name="arrow-left" size={22} color={colors.ink} />
         </Pressable>
         {template && (
-          <AppText variant="heading" weight="bold" style={{ flex: 1 }} numberOfLines={1}>
+          <AppText
+            variant="heading"
+            weight="bold"
+            style={{ flex: 1 }}
+            numberOfLines={1}
+          >
             {template.title}
           </AppText>
         )}
@@ -230,7 +266,7 @@ export function DiveDetailScreen() {
         <View style={{ paddingHorizontal: 20, gap: 16 }}>
           <Skeleton height={24} width="60%" />
           <Skeleton height={16} width="40%" />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
             <Skeleton height={90} style={{ flex: 1 }} />
             <Skeleton height={90} style={{ flex: 1 }} />
             <Skeleton height={90} style={{ flex: 1 }} />
@@ -241,7 +277,7 @@ export function DiveDetailScreen() {
       ) : query.isError || !template ? (
         <ErrorView
           fullScreen
-          message={t('error_connection', { ns: 'common' })}
+          message={t("error_connection", { ns: "common" })}
           onRetry={() => query.refetch()}
         />
       ) : (
@@ -259,25 +295,28 @@ export function DiveDetailScreen() {
             )}
 
             {/* Stats row */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 8 }}>
               <StatPill
                 icon="water-drop-1"
-                label={t('dive_depth')}
+                label={t("dive_depth")}
                 value={`${template.maxDepthMeters}m`}
                 color={diffColor}
               />
               {template.targetHoldSeconds != null && (
                 <StatPill
                   icon="stopwatch"
-                  label={t('dive_target_hold')}
+                  label={t("dive_target_hold")}
                   value={formatHold(template.targetHoldSeconds)}
                   color={colors.accent}
                 />
               )}
               <StatPill
                 icon="bolt"
-                label={t('dive_difficulty')}
-                value={template.difficulty.charAt(0) + template.difficulty.slice(1).toLowerCase()}
+                label={t("dive_difficulty")}
+                value={
+                  template.difficulty.charAt(0) +
+                  template.difficulty.slice(1).toLowerCase()
+                }
                 color={diffColor}
               />
             </View>
@@ -297,16 +336,24 @@ export function DiveDetailScreen() {
                   marginTop: 16,
                 }}
               >
-                <AppText variant="caption" secondary style={{ marginBottom: 8 }}>
-                  {t('dive_detail_about')}
+                <AppText
+                  variant="caption"
+                  secondary
+                  style={{ marginBottom: 8 }}
+                >
+                  {t("dive_detail_about")}
                 </AppText>
-                <AppText style={{ lineHeight: 22 }}>{template.description}</AppText>
+                <AppText style={{ lineHeight: 22 }}>
+                  {template.description}
+                </AppText>
               </View>
             )}
           </ScrollView>
 
           {/* Start CTA */}
-          <View style={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 8 }}>
+          <View
+            style={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 8 }}
+          >
             <Pressable
               onPress={handleStartSession}
               className="active:opacity-80"
@@ -314,15 +361,15 @@ export function DiveDetailScreen() {
                 backgroundColor: diffColor,
                 borderRadius: 16,
                 paddingVertical: 18,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
+                alignItems: "center",
+                flexDirection: "row",
+                justifyContent: "center",
                 gap: 10,
               }}
             >
               <LiIcon name="water-drop-1" size={20} color="#fff" />
-              <AppText weight="bold" style={{ color: '#fff', fontSize: 16 }}>
-                {t('dive_start_session')}
+              <AppText weight="bold" style={{ color: "#fff", fontSize: 16 }}>
+                {t("dive_start_session")}
               </AppText>
             </Pressable>
           </View>

@@ -190,6 +190,8 @@ export interface RecentRunItem {
   title: string;
   /** For training: totalSeconds elapsed. For dive: holdSeconds. */
   totalSeconds: number | null;
+  /** Dive runs only */
+  maxDepthMeters?: number | null;
 }
 
 // ─── Dive ─────────────────────────────────────────────────────────────────────

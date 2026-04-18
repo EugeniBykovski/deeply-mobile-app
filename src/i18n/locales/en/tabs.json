@@ -76,6 +76,11 @@
   "dive_section_premium": "Premium Dives",
   "dive_detail_discipline": "Discipline",
   "dive_detail_about": "About this dive",
+  "dive_session_ended": "Session Ended",
+  "dive_session_done_sub": "You reached full depth. Great dive!",
+  "dive_session_ended_sub": "Session stopped before reaching max depth.",
+  "dive_session_descending": "Descending…",
+  "dive_session_ready": "Ready to dive",
 
   "results_title": "Your Results",
   "results_empty_hint": "Complete your first session to start tracking progress.",

@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { ScrollView, View, RefreshControl } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, View, RefreshControl, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
@@ -108,6 +108,8 @@ function formatSeconds(s: number | null): string {
 }
 
 function RecentRunRow({ item }: { item: RecentRunItem }) {
+  const [expanded, setExpanded] = useState(false);
+
   const statusColor = item.completed ? '#3BBFAD' : '#D4915A';
   const iconName    = item.completed ? 'checkmark-circle-fill' : 'clock-fill';
   const typeIcon    = item.type === 'dive' ? 'water-drop-1' : 'stopwatch';
@@ -118,46 +120,110 @@ function RecentRunRow({ item }: { item: RecentRunItem }) {
   const formattedTime = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: item.completed ? `${statusColor}30` : colors.border,
-        borderRadius: 14,
-        padding: 14,
-      }}
-    >
-      {/* Type badge */}
+    <Pressable onPress={() => setExpanded((v) => !v)} className="active:opacity-85">
       <View
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 11,
-          backgroundColor: `${statusColor}15`,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: item.completed ? `${statusColor}30` : colors.border,
+          borderRadius: 14,
+          padding: 14,
         }}
       >
-        <LiIcon name={typeIcon} size={17} color={statusColor} />
-      </View>
+        {/* Main row */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {/* Type badge */}
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 11,
+              backgroundColor: `${statusColor}15`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <LiIcon name={typeIcon} size={17} color={statusColor} />
+          </View>
 
-      {/* Info */}
-      <View style={{ flex: 1 }}>
-        <AppText weight="medium" numberOfLines={1}>
-          {item.title}
-        </AppText>
-        <AppText variant="caption" muted style={{ marginTop: 2 }}>
-          {formattedDate} · {formattedTime}{duration ? ` · ${duration}` : ''}
-        </AppText>
-      </View>
+          {/* Info */}
+          <View style={{ flex: 1 }}>
+            <AppText weight="medium" numberOfLines={1}>
+              {item.title}
+            </AppText>
+            <AppText variant="caption" muted style={{ marginTop: 2 }}>
+              {formattedDate} · {formattedTime}{duration ? ` · ${duration}` : ''}
+            </AppText>
+          </View>
 
-      {/* Status icon */}
-      <LiIcon name={iconName} size={20} color={statusColor} />
-    </View>
+          {/* Chevron + status */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <LiIcon name={iconName} size={18} color={statusColor} />
+            <LiIcon
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={12}
+              color={colors.inkMuted}
+            />
+          </View>
+        </View>
+
+        {/* Expanded detail */}
+        {expanded && (
+          <View
+            style={{
+              marginTop: 12,
+              paddingTop: 12,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+              gap: 8,
+            }}
+          >
+            {/* Date/time full */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <AppText variant="caption" muted>Date</AppText>
+              <AppText variant="caption">
+                {date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              </AppText>
+            </View>
+
+            {/* Duration / hold */}
+            {item.totalSeconds != null && item.totalSeconds > 0 && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <AppText variant="caption" muted>
+                  {item.type === 'dive' ? 'Hold time' : 'Duration'}
+                </AppText>
+                <AppText variant="caption">{formatSeconds(item.totalSeconds)}</AppText>
+              </View>
+            )}
+
+            {/* Max depth (dive only) */}
+            {item.type === 'dive' && item.maxDepthMeters != null && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <AppText variant="caption" muted>Max depth</AppText>
+                <AppText variant="caption">{item.maxDepthMeters} m</AppText>
+              </View>
+            )}
+
+            {/* Type */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <AppText variant="caption" muted>Type</AppText>
+              <AppText variant="caption" style={{ textTransform: 'capitalize' }}>
+                {item.type}
+              </AppText>
+            </View>
+
+            {/* Status */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <AppText variant="caption" muted>Status</AppText>
+              <AppText variant="caption" style={{ color: statusColor }}>
+                {item.completed ? 'Completed' : 'Incomplete'}
+              </AppText>
+            </View>
+          </View>
+        )}
+      </View>
+    </Pressable>
   );
 }
 

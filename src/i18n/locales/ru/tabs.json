@@ -76,6 +76,11 @@
   "dive_section_premium": "Премиум погружения",
   "dive_detail_discipline": "Дисциплина",
   "dive_detail_about": "Об этом погружении",
+  "dive_session_ended": "Сессия завершена",
+  "dive_session_done_sub": "Вы достигли максимальной глубины. Отличное погружение!",
+  "dive_session_ended_sub": "Сессия остановлена до достижения максимальной глубины.",
+  "dive_session_descending": "Погружение…",
+  "dive_session_ready": "Готов к погружению",
 
   "results_title": "Ваши результаты",
   "results_empty_hint": "Завершите первую сессию, чтобы начать отслеживать прогресс.",

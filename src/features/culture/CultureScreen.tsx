@@ -195,41 +195,10 @@ export function CultureScreen() {
           onRetry={handleRefresh}
         />
       ) : (
-        <>
-          {/* Sticky filter row — outside the ScrollView so it never scrolls away */}
-          {sections.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
-                paddingHorizontal: 20,
-                paddingBottom: 12,
-                paddingTop: 4,
-                gap: 8,
-              }}
-              style={{ flexShrink: 0 }}
-            >
-              <FilterChip
-                label={t('culture_all', { defaultValue: 'All' })}
-                active={activeSection === null}
-                onPress={() => setActiveSection(null)}
-              />
-              {sections.map((sec) => (
-                <FilterChip
-                  key={sec.key}
-                  label={sec.title}
-                  active={activeSection === sec.key}
-                  onPress={() =>
-                    setActiveSection((prev) => (prev === sec.key ? null : sec.key))
-                  }
-                />
-              ))}
-            </ScrollView>
-          )}
-
-          {/* Scrollable articles */}
+        <View style={{ flex: 1, position: 'relative' }}>
+          {/* Articles scroll — padded top so content starts below the floating filter */}
           <ScrollView
-            className="flex-1"
+            style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -241,19 +210,63 @@ export function CultureScreen() {
                 colors={[colors.accent]}
               />
             }
+            contentContainerStyle={{
+              paddingTop: sections.length > 0 ? 52 : 8,
+              paddingHorizontal: 20,
+              paddingBottom: 32,
+              gap: 16,
+            }}
           >
             {articles.length === 0 ? (
               <EmptyView message={t('culture_empty')} />
             ) : (
-              <View style={{ paddingHorizontal: 20, gap: 16 }}>
-                {articles.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
-                ))}
-              </View>
+              articles.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))
             )}
-            <View className="h-8" />
           </ScrollView>
-        </>
+
+          {/* Floating translucent filter bar — overlays the scroll content */}
+          {sections.length > 0 && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: 'rgba(11,28,29,0.90)',
+                zIndex: 10,
+              }}
+            >
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  paddingHorizontal: 20,
+                  paddingTop: 8,
+                  paddingBottom: 8,
+                  gap: 8,
+                }}
+              >
+                <FilterChip
+                  label={t('culture_all', { defaultValue: 'All' })}
+                  active={activeSection === null}
+                  onPress={() => setActiveSection(null)}
+                />
+                {sections.map((sec) => (
+                  <FilterChip
+                    key={sec.key}
+                    label={sec.title}
+                    active={activeSection === sec.key}
+                    onPress={() =>
+                      setActiveSection((prev) => (prev === sec.key ? null : sec.key))
+                    }
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
       )}
     </SafeAreaView>
   );

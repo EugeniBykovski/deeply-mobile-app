@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Dimensions,
-  Pressable,
-  View,
-} from 'react-native';
+import { Dimensions, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -26,17 +22,15 @@ import { colors } from '@/theme';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const { height: SCREEN_H } = Dimensions.get('window');
-
-// Vertical lane geometry (available height for diver travel, set in layout)
-const LANE_HEIGHT = SCREEN_H * 0.52;
+const LANE_HEIGHT = SCREEN_H * 0.50;
 const DIVER_SIZE  = 32;
-const TAPE_STEPS  = 5; // meter intervals on depth tape
+const TAPE_STEPS  = 5;
 
-// Background color interpolation: surface (light teal-blue) → abyss (near black)
 const SURFACE_COLOR = '#0d2d3a';
 const ABYSS_COLOR   = '#030a10';
 
 type SessionState = 'idle' | 'holding' | 'surfacing' | 'done';
+type SessionOutcome = 'completed' | 'interrupted';
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 function formatTime(s: number) { return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }
@@ -50,11 +44,9 @@ export function DiveSessionScreen() {
 
   const params = useLocalSearchParams<{
     id: string;
-    slug: string;
     title: string;
     maxDepthMeters: string;
     targetHoldSeconds: string;
-    profilePoints: string;
   }>();
 
   const templateId        = params.id ?? '';
@@ -62,23 +54,23 @@ export function DiveSessionScreen() {
   const maxDepthMeters    = Number(params.maxDepthMeters ?? 30);
   const targetHoldSeconds = Number(params.targetHoldSeconds ?? 120);
 
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── Session state ──────────────────────────────────────────────────────────
 
-  const [sessionState, setSessionState] = useState<SessionState>('idle');
-  const [holdSeconds,  setHoldSeconds]  = useState(0);
-  const [maxReached,   setMaxReached]   = useState(0);
-  const [saving,       setSaving]       = useState(false);
+  const [sessionState,   setSessionState]   = useState<SessionState>('idle');
+  const [sessionOutcome, setSessionOutcome] = useState<SessionOutcome | null>(null);
+  const [holdSeconds,    setHoldSeconds]    = useState(0);
+  const [currentDepth,   setCurrentDepth]   = useState(0);
+  const [maxReached,     setMaxReached]     = useState(0);
+  const [saving,         setSaving]         = useState(false);
 
-  // Refs for hold timer
-  const holdIntervalRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const totalHoldRef      = useRef(0);
+  const holdIntervalRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const totalHoldRef        = useRef(0);
+  const reachedMaxDepthRef  = useRef(false); // true once diver hits ≥ 98% of maxDepth
 
   // ── Animated values ────────────────────────────────────────────────────────
 
-  // depthProgress: 0 = surface, 1 = maxDepthMeters
-  const depthProgress = useSharedValue(0);
+  const depthProgress = useSharedValue(0); // 0 = surface, 1 = max depth
 
-  // Animated background
   const bgStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(
       depthProgress.value,
@@ -87,27 +79,24 @@ export function DiveSessionScreen() {
     ),
   }));
 
-  // Diver Y position (0 = top of lane, LANE_HEIGHT - DIVER_SIZE = bottom)
   const diverStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: depthProgress.value * (LANE_HEIGHT - DIVER_SIZE),
-      },
-    ],
+    transform: [{ translateY: depthProgress.value * (LANE_HEIGHT - DIVER_SIZE) }],
   }));
 
-  const [currentDepthDisplay, setCurrentDepthDisplay] = useState(0);
-
-  // Poll Reanimated SharedValue → React state for the depth readout.
+  // Poll SharedValue → React state for depth readout + max-depth detection.
   useEffect(() => {
     if (sessionState === 'idle' || sessionState === 'done') {
-      setCurrentDepthDisplay(0);
+      setCurrentDepth(0);
       return;
     }
     const iv = setInterval(() => {
       const approx = Math.round(depthProgress.value * maxDepthMeters);
-      setCurrentDepthDisplay(approx);
+      setCurrentDepth(approx);
       setMaxReached((prev) => Math.max(prev, approx));
+      // Mark as truly completed when diver reaches full depth
+      if (depthProgress.value >= 0.98) {
+        reachedMaxDepthRef.current = true;
+      }
     }, 100);
     return () => clearInterval(iv);
   }, [sessionState, maxDepthMeters, depthProgress]);
@@ -129,36 +118,26 @@ export function DiveSessionScreen() {
     }
   }
 
-  // ── Descent / ascent animations ────────────────────────────────────────────
+  // ── Descent / ascent ───────────────────────────────────────────────────────
 
   function startDescent() {
-    const currentProgress = depthProgress.value;
-    const remaining = 1 - currentProgress;
-    // Speed: full descent takes targetHoldSeconds ms
-    const duration = remaining * targetHoldSeconds * 1000;
-
-    depthProgress.value = withTiming(1, {
-      duration,
-      easing: Easing.linear,
-    });
+    const remaining = 1 - depthProgress.value;
+    const duration  = remaining * targetHoldSeconds * 1000;
+    depthProgress.value = withTiming(1, { duration, easing: Easing.linear });
   }
 
   function startAscent() {
-    const currentProgress = depthProgress.value;
-    // Ascent is 1.5× faster than descent
-    const duration = currentProgress * targetHoldSeconds * 1000 * 0.67;
-
+    const duration = depthProgress.value * targetHoldSeconds * 1000 * 0.67;
     depthProgress.value = withTiming(0, {
       duration: Math.max(duration, 500),
       easing: Easing.linear,
     });
   }
 
-  // ── Controls ───────────────────────────────────────────────────────────────
+  // ── Press controls ─────────────────────────────────────────────────────────
 
   function handlePressIn() {
     if (sessionState === 'done') return;
-
     cancelAnimation(depthProgress);
     setSessionState('holding');
     startHoldTimer();
@@ -167,20 +146,17 @@ export function DiveSessionScreen() {
 
   function handlePressOut() {
     if (sessionState === 'done') return;
-
     cancelAnimation(depthProgress);
     stopHoldTimer();
     setSessionState('surfacing');
     startAscent();
   }
 
-  // When ascent animation finishes and depth reaches 0, we detect it via polling
+  // Return to idle when ascent reaches surface
   useEffect(() => {
     if (sessionState !== 'surfacing') return;
     const iv = setInterval(() => {
-      if (depthProgress.value <= 0.01) {
-        setSessionState('idle');
-      }
+      if (depthProgress.value <= 0.01) setSessionState('idle');
     }, 200);
     return () => clearInterval(iv);
   }, [sessionState, depthProgress]);
@@ -190,6 +166,10 @@ export function DiveSessionScreen() {
   const finishDive = useCallback(async () => {
     stopHoldTimer();
     cancelAnimation(depthProgress);
+
+    // True completion = user held all the way to max depth
+    const trueCompleted = reachedMaxDepthRef.current;
+    setSessionOutcome(trueCompleted ? 'completed' : 'interrupted');
     setSessionState('done');
     setSaving(true);
 
@@ -197,7 +177,7 @@ export function DiveSessionScreen() {
       await diveService.saveRun({
         templateId,
         holdSeconds: totalHoldRef.current,
-        completed: totalHoldRef.current > 0,
+        completed: trueCompleted,
       });
       queryClient.invalidateQueries({ queryKey: ['results'] });
     } catch {
@@ -207,7 +187,7 @@ export function DiveSessionScreen() {
     }
   }, [templateId, depthProgress, queryClient]);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       stopHoldTimer();
@@ -215,39 +195,31 @@ export function DiveSessionScreen() {
     };
   }, [depthProgress]);
 
-  // ── Depth tape markers ─────────────────────────────────────────────────────
+  // ── Depth tape ─────────────────────────────────────────────────────────────
 
-  // Generate meter markers at TAPE_STEPS intervals
   const tapeMarkers: number[] = [];
-  for (let m = 0; m <= maxDepthMeters; m += TAPE_STEPS) {
-    tapeMarkers.push(m);
-  }
-  if (tapeMarkers[tapeMarkers.length - 1] !== maxDepthMeters) {
-    tapeMarkers.push(maxDepthMeters);
-  }
+  for (let m = 0; m <= maxDepthMeters; m += TAPE_STEPS) tapeMarkers.push(m);
+  if (tapeMarkers[tapeMarkers.length - 1] !== maxDepthMeters) tapeMarkers.push(maxDepthMeters);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Derived booleans ───────────────────────────────────────────────────────
 
   const isDone      = sessionState === 'done';
   const isHolding   = sessionState === 'holding';
   const isSurfacing = sessionState === 'surfacing';
   const isIdle      = sessionState === 'idle';
 
+  const isCompleted   = isDone && sessionOutcome === 'completed';
+  const isInterrupted = isDone && sessionOutcome === 'interrupted';
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <Animated.View style={[{ flex: 1 }, bgStyle]}>
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
 
-        {/* ── Top bar ── */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 20,
-            paddingTop: 12,
-            paddingBottom: 8,
-          }}
-        >
+        {/* Top bar */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 }}>
           {(isIdle || isDone) && (
             <Pressable
               onPress={() => router.back()}
@@ -261,9 +233,8 @@ export function DiveSessionScreen() {
           <AppText weight="semibold" style={{ flex: 1, color: 'rgba(255,255,255,0.85)' }} numberOfLines={1}>
             {title}
           </AppText>
-          {/* Hold timer */}
           <View style={{ alignItems: 'flex-end' }}>
-            <AppText variant="caption" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <AppText variant="caption" style={{ color: 'rgba(255,255,255,0.45)' }}>
               {t('dive_session_hold_time')}
             </AppText>
             <AppText weight="bold" style={{ color: '#fff', fontSize: 18 }}>
@@ -272,62 +243,101 @@ export function DiveSessionScreen() {
           </View>
         </View>
 
+        {/* ── DONE STATE ── */}
         {isDone ? (
-          // ── Done state ────────────────────────────────────────────────────
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+
+            {/* Icon */}
             <View
               style={{
-                width: 80,
-                height: 80,
-                borderRadius: 24,
-                backgroundColor: 'rgba(59,191,173,0.2)',
+                width: 88,
+                height: 88,
+                borderRadius: 28,
+                backgroundColor: isCompleted ? 'rgba(59,191,173,0.18)' : 'rgba(212,145,90,0.15)',
+                borderWidth: 1,
+                borderColor: isCompleted ? 'rgba(59,191,173,0.35)' : 'rgba(212,145,90,0.3)',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 24,
+                marginBottom: 20,
               }}
             >
-              <LiIcon name="check-circle-1" size={44} color="#3BBFAD" />
+              <LiIcon
+                name={isCompleted ? 'check-circle-1' : 'water-drop-1'}
+                size={44}
+                color={isCompleted ? '#3BBFAD' : '#D4915A'}
+              />
             </View>
+
+            {/* Title */}
             <AppText
-              variant="heading"
               weight="bold"
-              style={{ color: '#fff', fontSize: 26, marginBottom: 8, textAlign: 'center' }}
+              style={{ color: '#fff', fontSize: 24, textAlign: 'center', marginBottom: 6 }}
             >
-              {t('dive_session_done')}
+              {isCompleted ? t('dive_session_done') : t('dive_session_ended')}
             </AppText>
 
-            <View style={{ flexDirection: 'row', gap: 16, marginTop: 20, marginBottom: 40 }}>
-              <View style={{ alignItems: 'center' }}>
-                <AppText style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 4 }}>
-                  {t('dive_session_max_depth')}
-                </AppText>
-                <AppText weight="bold" style={{ color: '#3BBFAD', fontSize: 28 }}>
+            {/* Subtitle */}
+            <AppText style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center', marginBottom: 32 }}>
+              {isCompleted
+                ? t('dive_session_done_sub')
+                : t('dive_session_ended_sub')}
+            </AppText>
+
+            {/* Stats card */}
+            <View
+              style={{
+                width: '100%',
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderRadius: 20,
+                paddingVertical: 20,
+                paddingHorizontal: 24,
+                flexDirection: 'row',
+                justifyContent: 'space-around',
+                marginBottom: 32,
+              }}
+            >
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <LiIcon name="water-drop-1" size={18} color={isCompleted ? '#3BBFAD' : '#D4915A'} />
+                <AppText weight="bold" style={{ color: '#fff', fontSize: 26 }}>
                   {maxReached}m
                 </AppText>
-              </View>
-              <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
-              <View style={{ alignItems: 'center' }}>
-                <AppText style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 4 }}>
-                  {t('dive_session_total_hold')}
+                <AppText style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11 }}>
+                  {t('dive_session_max_depth')}
                 </AppText>
-                <AppText weight="bold" style={{ color: '#fff', fontSize: 28 }}>
+              </View>
+
+              <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 4 }} />
+
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <LiIcon name="stopwatch" size={18} color="rgba(255,255,255,0.6)" />
+                <AppText weight="bold" style={{ color: '#fff', fontSize: 26 }}>
                   {formatTime(holdSeconds)}
+                </AppText>
+                <AppText style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11 }}>
+                  {t('dive_session_total_hold')}
                 </AppText>
               </View>
             </View>
 
+            {/* CTA */}
             {saving ? (
-              <AppText style={{ color: 'rgba(255,255,255,0.5)' }}>{t('dive_session_saving')}</AppText>
+              <AppText style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
+                {t('dive_session_saving')}
+              </AppText>
             ) : (
               <Pressable
                 onPress={() => router.back()}
                 className="active:opacity-80"
                 style={{
-                  backgroundColor: '#3BBFAD',
-                  borderRadius: 16,
-                  paddingVertical: 16,
-                  paddingHorizontal: 48,
+                  width: '100%',
+                  backgroundColor: isCompleted ? '#3BBFAD' : 'rgba(255,255,255,0.12)',
+                  borderRadius: 18,
+                  paddingVertical: 17,
                   alignItems: 'center',
+                  borderWidth: isCompleted ? 0 : 1,
+                  borderColor: 'rgba(255,255,255,0.2)',
                 }}
               >
                 <AppText weight="bold" style={{ color: '#fff', fontSize: 16 }}>
@@ -338,155 +348,104 @@ export function DiveSessionScreen() {
           </View>
 
         ) : (
-          // ── Active dive state ─────────────────────────────────────────────
+          // ── ACTIVE DIVE STATE ──────────────────────────────────────────────
           <>
-            {/* ── Depth display ── */}
-            <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 4 }}>
-              <AppText weight="bold" style={{ color: 'rgba(255,255,255,0.9)', fontSize: 42, lineHeight: 46 }}>
-                {formatDepth(currentDepthDisplay)}
+            {/* Current depth display */}
+            <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 4 }}>
+              <AppText weight="bold" style={{ color: 'rgba(255,255,255,0.9)', fontSize: 44, lineHeight: 50 }}>
+                {formatDepth(currentDepth)}
               </AppText>
-              <AppText style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>
-                {isHolding ? t('dive_session_release') : isSurfacing ? t('dive_session_surfacing') : t('dive_session_hold')}
+              <AppText style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginTop: 0 }}>
+                {isHolding
+                  ? t('dive_session_descending')
+                  : isSurfacing
+                  ? t('dive_session_surfacing')
+                  : t('dive_session_ready')}
               </AppText>
             </View>
 
-            {/* ── Main dive area: tape + diver ── */}
-            <View
-              style={{
-                flex: 1,
-                flexDirection: 'row',
-                paddingHorizontal: 24,
-                paddingTop: 8,
-              }}
-            >
-              {/* Depth tape (left side) */}
-              <View
-                style={{
-                  width: 48,
-                  height: LANE_HEIGHT,
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-end',
-                  paddingRight: 8,
-                }}
-              >
+            {/* Depth tape + diver lane */}
+            <View style={{ flex: 1, flexDirection: 'row', paddingHorizontal: 20, paddingTop: 4 }}>
+              {/* Left: depth tape */}
+              <View style={{ width: 52, height: LANE_HEIGHT, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 10 }}>
                 {tapeMarkers.map((m) => (
                   <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View
-                      style={{
-                        width: 8,
-                        height: 1,
-                        backgroundColor: 'rgba(255,255,255,0.25)',
-                      }}
-                    />
-                    <AppText
-                      style={{
-                        color: 'rgba(255,255,255,0.4)',
-                        fontSize: 10,
-                        fontVariant: ['tabular-nums'],
-                      }}
-                    >
-                      {m}m
-                    </AppText>
+                    <View style={{ width: 8, height: 1, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                    <AppText style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>{m}m</AppText>
                   </View>
                 ))}
               </View>
 
-              {/* Vertical lane + diver */}
+              {/* Centre: lane + diver */}
               <View style={{ flex: 1, position: 'relative' }}>
-                {/* Lane rail */}
-                <View
-                  style={{
+                {/* Rail */}
+                <View style={{
+                  position: 'absolute', left: '50%', top: 0,
+                  width: 2, height: LANE_HEIGHT,
+                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  marginLeft: -1, borderRadius: 1,
+                }} />
+                {/* Target marker at max depth */}
+                <View style={{
+                  position: 'absolute', left: '50%', top: LANE_HEIGHT - 2,
+                  width: 24, height: 2, marginLeft: -12,
+                  backgroundColor: 'rgba(59,191,173,0.5)', borderRadius: 1,
+                }} />
+                {/* Animated diver */}
+                <Animated.View style={[
+                  {
+                    position: 'absolute', left: '50%', top: 0,
+                    width: DIVER_SIZE, height: DIVER_SIZE,
+                    marginLeft: -(DIVER_SIZE / 2),
+                    alignItems: 'center', justifyContent: 'center',
+                  },
+                  diverStyle,
+                ]}>
+                  <View style={{
                     position: 'absolute',
-                    left: '50%',
-                    top: 0,
-                    width: 2,
-                    height: LANE_HEIGHT,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    marginLeft: -1,
-                    borderRadius: 1,
-                  }}
-                />
-
-                {/* Target depth marker */}
-                <View
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    top: LANE_HEIGHT - 2,
-                    width: 20,
-                    height: 2,
-                    marginLeft: -10,
-                    backgroundColor: 'rgba(59,191,173,0.6)',
-                    borderRadius: 1,
-                  }}
-                />
-
-                {/* Diver icon */}
-                <Animated.View
-                  style={[
-                    {
-                      position: 'absolute',
-                      left: '50%',
-                      top: 0,
-                      width: DIVER_SIZE,
-                      height: DIVER_SIZE,
-                      marginLeft: -(DIVER_SIZE / 2),
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    },
-                    diverStyle,
-                  ]}
-                >
-                  {/* Glow */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      width: DIVER_SIZE + 16,
-                      height: DIVER_SIZE + 16,
-                      borderRadius: (DIVER_SIZE + 16) / 2,
-                      backgroundColor: isHolding ? 'rgba(59,191,173,0.25)' : 'rgba(255,255,255,0.08)',
-                    }}
-                  />
+                    width: DIVER_SIZE + 20, height: DIVER_SIZE + 20,
+                    borderRadius: (DIVER_SIZE + 20) / 2,
+                    backgroundColor: isHolding ? 'rgba(59,191,173,0.2)' : 'rgba(255,255,255,0.06)',
+                  }} />
                   <LiIcon
                     name="water-drop-1"
                     size={DIVER_SIZE}
-                    color={isHolding ? '#3BBFAD' : 'rgba(255,255,255,0.75)'}
+                    color={isHolding ? '#3BBFAD' : 'rgba(255,255,255,0.7)'}
                   />
                 </Animated.View>
               </View>
 
               {/* Right spacer */}
-              <View style={{ width: 48 }} />
+              <View style={{ width: 52 }} />
             </View>
 
-            {/* ── Controls ── */}
-            <View style={{ paddingHorizontal: 24, paddingBottom: 16, paddingTop: 8, gap: 12 }}>
-              {/* Hold button */}
+            {/* Controls */}
+            <View style={{ paddingHorizontal: 20, paddingBottom: 12, paddingTop: 4, gap: 10 }}>
+              {/* Primary hold button */}
               <Pressable
                 onPressIn={handlePressIn}
                 onPressOut={handlePressOut}
                 style={({ pressed }) => ({
-                  height: 80,
-                  borderRadius: 24,
+                  height: 76,
+                  borderRadius: 22,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: pressed || isHolding
-                    ? '#3BBFAD'
-                    : 'rgba(255,255,255,0.1)',
+                  gap: 4,
+                  backgroundColor: (pressed || isHolding) ? '#3BBFAD' : 'rgba(255,255,255,0.08)',
                   borderWidth: 1.5,
-                  borderColor: isHolding
-                    ? '#3BBFAD'
-                    : 'rgba(255,255,255,0.2)',
+                  borderColor: isHolding ? '#3BBFAD' : 'rgba(255,255,255,0.18)',
                 })}
               >
-                <AppText
-                  weight="bold"
-                  style={{
-                    color: isHolding ? '#fff' : 'rgba(255,255,255,0.7)',
-                    fontSize: 16,
-                    letterSpacing: 0.5,
-                  }}
-                >
+                <LiIcon
+                  name={isHolding ? 'water-drop-1' : isSurfacing ? 'arrow-up' : 'water-drop-1'}
+                  size={20}
+                  color={isHolding ? '#fff' : 'rgba(255,255,255,0.5)'}
+                />
+                <AppText weight="bold" style={{
+                  color: isHolding ? '#fff' : 'rgba(255,255,255,0.6)',
+                  fontSize: 15,
+                  letterSpacing: 0.3,
+                }}>
                   {isHolding
                     ? t('dive_session_release')
                     : isSurfacing
@@ -495,19 +454,19 @@ export function DiveSessionScreen() {
                 </AppText>
               </Pressable>
 
-              {/* Finish button */}
+              {/* Secondary finish button */}
               <Pressable
                 onPress={finishDive}
-                className="active:opacity-75"
+                className="active:opacity-70"
                 style={{
-                  paddingVertical: 14,
+                  paddingVertical: 13,
                   borderRadius: 16,
                   alignItems: 'center',
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.15)',
+                  borderColor: 'rgba(255,255,255,0.12)',
                 }}
               >
-                <AppText style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
+                <AppText style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
                   {t('dive_session_finish')}
                 </AppText>
               </Pressable>
