@@ -24,6 +24,16 @@ export interface User {
   id: string;
   email?: string | null;
   appleSub: string;
+  isPro: boolean;
+  proExpiresAt?: string | null;
+}
+
+// ─── Purchases ────────────────────────────────────────────────────────────────
+
+export interface SubscriptionStatus {
+  isPro: boolean;
+  proExpiresAt: string | null;
+  proActivatedAt: string | null;
 }
 
 // ─── Culture ──────────────────────────────────────────────────────────────────

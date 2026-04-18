@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { TOKEN_KEYS } from '@/api/client';
 import { authEvents } from '@/api/authEvents';
 import type { User } from '@/api/types';
+import { usePurchaseStore } from './purchaseStore';
 
 interface AuthState {
   user: User | null;
@@ -34,6 +35,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.setItemAsync(TOKEN_KEYS.access, accessToken);
     await SecureStore.setItemAsync(TOKEN_KEYS.refresh, refreshToken);
     set({ user, accessToken, isAuthenticated: true });
+    // Associate RevenueCat with the authenticated user ID
+    usePurchaseStore.getState().identify(user.id).catch(() => {});
   },
 
   setUser: (user) => set({ user }),
@@ -44,6 +47,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       SecureStore.deleteItemAsync(TOKEN_KEYS.refresh),
     ]);
     set({ user: null, accessToken: null, isAuthenticated: false });
+    // Reset RevenueCat to anonymous state
+    usePurchaseStore.getState().logout().catch(() => {});
   },
 
   restoreSession: async () => {

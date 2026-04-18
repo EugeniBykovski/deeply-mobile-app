@@ -47,4 +47,10 @@ export const endpoints = {
     template: (slug: string) => `/dive/templates/${slug}`,
     run: '/dive/run',
   },
+
+  // Purchases
+  purchases: {
+    status: '/purchases/me',
+    sync: '/purchases/sync',
+  },
 } as const;

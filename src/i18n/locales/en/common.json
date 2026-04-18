@@ -22,5 +22,7 @@
   "delete_account_section_hint": "Permanently removes your account and all associated data. This cannot be undone.",
   "language": "Language",
   "english": "English",
-  "russian": "Русский"
+  "russian": "Русский",
+  "upgrade_to_pro": "Upgrade to Pro",
+  "manage_subscription": "Manage Subscription"
 }

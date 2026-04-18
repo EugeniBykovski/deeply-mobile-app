@@ -14,6 +14,7 @@ import { i18n } from "@/i18n";
 import { AppText } from "@/shared/components/AppText";
 import { LiIcon } from "@/shared/components/LiIcon";
 import { useAuthStore } from "@/store/authStore";
+import { usePurchaseStore } from "@/store/purchaseStore";
 import { authService } from "@/api/services/auth.service";
 import { colors } from "@/theme";
 
@@ -190,6 +191,7 @@ function LanguageSection() {
 export function SettingsScreen() {
   const { t } = useTranslation("common");
   const { clearAuth, isAuthenticated } = useAuthStore();
+  const isPro = usePurchaseStore((s) => s.isPro);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleLogout = useCallback(async () => {
@@ -243,7 +245,26 @@ export function SettingsScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="h-6" />
 
-        {/* 1 ── Language ────────────────────────────────────────────────── */}
+        {/* 1 ── Deeply Pro ─────────────────────────────────────────────── */}
+        <Section title="Deeply Pro">
+          {isPro ? (
+            <Row
+              icon="crown"
+              label={t("manage_subscription")}
+              onPress={() => router.push("/customer-center" as any)}
+              last
+            />
+          ) : (
+            <Row
+              icon="sparkles"
+              label={t("upgrade_to_pro")}
+              onPress={() => router.push("/paywall" as any)}
+              last
+            />
+          )}
+        </Section>
+
+        {/* 2 ── Language ────────────────────────────────────────────────── */}
         <LanguageSection />
 
         {/* 2 ── Account (sign-out) ─────────────────────────────────────── */}

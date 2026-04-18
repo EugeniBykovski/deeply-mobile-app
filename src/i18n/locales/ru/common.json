@@ -22,5 +22,7 @@
   "delete_account_section_hint": "Безвозвратно удаляет аккаунт и все связанные данные. Отменить невозможно.",
   "language": "Язык",
   "english": "English",
-  "russian": "Русский"
+  "russian": "Русский",
+  "upgrade_to_pro": "Перейти на Pro",
+  "manage_subscription": "Управление подпиской"
 }

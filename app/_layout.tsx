@@ -13,6 +13,7 @@ import i18n from '@/i18n';
 import { queryClient } from '@/shared/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
+import { usePurchaseStore } from '@/store/purchaseStore';
 import { SplashView } from '@/shared/components/SplashView';
 import { colors } from '@/theme';
 
@@ -24,6 +25,7 @@ export default function RootLayout() {
 
   const restoreSession = useAuthStore((s) => s.restoreSession);
   const savedLanguage = useOnboardingStore((s) => s.language);
+  const configurePurchases = usePurchaseStore((s) => s.configure);
 
   useEffect(() => {
     async function bootstrap() {
@@ -34,6 +36,11 @@ export default function RootLayout() {
         }
         // Restore auth session from SecureStore
         await restoreSession();
+
+        // Configure RevenueCat SDK.
+        // Pass userId if already authenticated (from restored session).
+        const userId = useAuthStore.getState().user?.id;
+        configurePurchases(userId);
       } catch {
         // Non-fatal — proceed with defaults
       } finally {
@@ -132,6 +139,24 @@ export default function RootLayout() {
                 animation: 'slide_from_bottom',
                 headerShown: false,
                 contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="paywall"
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+                headerShown: false,
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
+            <Stack.Screen
+              name="customer-center"
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+                headerShown: false,
+                contentStyle: { backgroundColor: 'transparent' },
               }}
             />
             <Stack.Screen name="+not-found" />
