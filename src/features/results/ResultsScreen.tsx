@@ -18,6 +18,7 @@ import { resultsService } from '@/api/services/results.service';
 import type { ResultsSummary, RecentRunItem } from '@/api/types';
 import { colors } from '@/theme';
 import { useTrainingSessionStore } from '@/store/trainingSessionStore';
+import { useDiveSessionStore } from '@/store/diveSessionStore';
 
 // ─── Achievement labels ───────────────────────────────────────────────────────
 
@@ -275,6 +276,7 @@ export function ResultsScreen() {
   const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const { runs: localRuns } = useTrainingSessionStore();
+  const { runs: localDiveRuns } = useDiveSessionStore();
 
   const summaryQuery = useResultsSummary();
   const recentQuery  = useRecentRuns();
@@ -298,7 +300,7 @@ export function ResultsScreen() {
 
   // Merge local session runs with backend runs, deduplicating by trainingId+date proximity.
   // Local runs appear first and are shown even when not authenticated.
-  const localRunItems: RecentRunItem[] = localRuns.map((r) => ({
+  const localTrainingItems: RecentRunItem[] = localRuns.map((r) => ({
     id: r.id,
     type: 'training' as const,
     startedAt: r.completedAt,
@@ -307,21 +309,47 @@ export function ResultsScreen() {
     totalSeconds: r.totalSeconds > 0 ? r.totalSeconds : null,
   }));
 
-  // Filter out backend runs that match a local run (same trainingId within 5 min)
+  const localDiveItems: RecentRunItem[] = localDiveRuns.map((r) => ({
+    id: r.id,
+    type: 'dive' as const,
+    startedAt: r.completedAt,
+    completed: r.completed,
+    title: r.templateTitle,
+    totalSeconds: r.holdSeconds > 0 ? r.holdSeconds : null,
+    maxDepthMeters: r.maxDepthReached > 0 ? r.maxDepthReached : null,
+  }));
+
+  // Filter out backend runs that match a local run (same title within 5 min)
   const localTrainingIds = new Set(localRuns.map((r) => r.trainingId));
+  const localDiveTemplateIds = new Set(localDiveRuns.map((r) => r.templateId));
   const filteredBackend = backendRuns.filter((br) => {
-    if (!localTrainingIds.size) return true;
-    // Keep backend run if we don't have a local counterpart for this training
-    const matchingLocal = localRuns.find(
-      (lr) =>
-        lr.trainingId === br.id ||
-        (br.title === lr.trainingName &&
-          Math.abs(new Date(br.startedAt).getTime() - new Date(lr.completedAt).getTime()) < 5 * 60 * 1000),
-    );
-    return !matchingLocal;
+    if (br.type === 'training') {
+      if (!localTrainingIds.size) return true;
+      const matchingLocal = localRuns.find(
+        (lr) =>
+          lr.trainingId === br.id ||
+          (br.title === lr.trainingName &&
+            Math.abs(new Date(br.startedAt).getTime() - new Date(lr.completedAt).getTime()) < 5 * 60 * 1000),
+      );
+      return !matchingLocal;
+    }
+    if (br.type === 'dive') {
+      if (!localDiveTemplateIds.size) return true;
+      const matchingLocal = localDiveRuns.find(
+        (lr) =>
+          lr.templateId === br.id ||
+          (br.title === lr.templateTitle &&
+            Math.abs(new Date(br.startedAt).getTime() - new Date(lr.completedAt).getTime()) < 5 * 60 * 1000),
+      );
+      return !matchingLocal;
+    }
+    return true;
   });
 
-  const recentRuns = [...localRunItems, ...filteredBackend];
+  const allLocalItems = [...localTrainingItems, ...localDiveItems].sort(
+    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+  );
+  const recentRuns = [...allLocalItems, ...filteredBackend];
 
   const isLoading  = isAuthenticated && summaryQuery.isLoading;
   // Only show a hard error if the primary summary query fails.

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -160,13 +160,19 @@ function ArticleCard({ article }: { article: CultureArticleListItem }) {
 export function CultureScreen() {
   const { t } = useTranslation('tabs');
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
 
   const sectionsQuery = useCultureSections();
   const articlesQuery = useCultureArticles(activeSection ?? undefined);
 
-  const handleRefresh = useCallback(() => {
-    sectionsQuery.refetch();
-    articlesQuery.refetch();
+  const handleRefresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setIsRefreshing(true);
+    await Promise.allSettled([sectionsQuery.refetch(), articlesQuery.refetch()]);
+    setIsRefreshing(false);
+    refreshingRef.current = false;
   }, [sectionsQuery, articlesQuery]);
 
   const isLoading = sectionsQuery.isLoading || articlesQuery.isLoading;
@@ -202,9 +208,7 @@ export function CultureScreen() {
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
-                refreshing={
-                  (sectionsQuery.isFetching || articlesQuery.isFetching) && !isLoading
-                }
+                refreshing={isRefreshing}
                 onRefresh={handleRefresh}
                 tintColor={colors.accent}
                 colors={[colors.accent]}
