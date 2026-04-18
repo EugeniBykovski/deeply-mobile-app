@@ -280,11 +280,15 @@ export function TrainingRunScreen() {
     name: string;
     steps: string;
     estimatedMinutes: string;
+    slug: string;
+    programSlug: string;
   }>();
 
   const steps: TrainingStep[] = params.steps ? JSON.parse(params.steps) : [];
-  const trainingId   = params.id;
-  const trainingName = params.name ?? 'Training';
+  const trainingId    = params.id;
+  const trainingName  = params.name ?? 'Training';
+  const trainingSlug  = params.slug;
+  const programSlug   = params.programSlug;
 
   const { visualizationMode, setVisualizationMode } = useTrainingPrefsStore();
   const { addRun, setInProgress } = useTrainingSessionStore();
@@ -380,14 +384,16 @@ export function TrainingRunScreen() {
       isSavingRef.current = true;
 
       // Optimistic local update — immediately visible in Results tab
-      if (completed && trainingId) {
+      if (trainingId) {
         addRun({
           id: `local-${Date.now()}`,
           trainingId,
           trainingName,
+          trainingSlug,
+          programSlug,
           completedAt: new Date().toISOString(),
           totalSeconds: elapsedRef.current,
-          completed: true,
+          completed,
         });
       }
 

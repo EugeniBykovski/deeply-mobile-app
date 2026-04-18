@@ -189,7 +189,10 @@ function SummaryChip({ label, value }: { label: string; value: string }) {
 
 export function TrainingDetailScreen() {
   const { t } = useTranslation('tabs');
-  const { trainingSlug } = useLocalSearchParams<{ trainingSlug: string }>();
+  const { trainingSlug, slug: programSlug } = useLocalSearchParams<{
+    trainingSlug: string;
+    slug: string;
+  }>();
 
   const query = useTrainingDetail(trainingSlug ?? '');
   const training = query.data;
@@ -203,6 +206,8 @@ export function TrainingDetailScreen() {
         name: training.title ?? training.name ?? 'Training',
         steps: JSON.stringify(training.steps),
         estimatedMinutes: String(training.estimatedMinutes ?? 0),
+        slug: trainingSlug ?? '',
+        programSlug: programSlug ?? '',
       },
     } as any);
   }

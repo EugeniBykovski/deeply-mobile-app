@@ -6,7 +6,7 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -159,6 +159,7 @@ function ArticleCard({ article }: { article: CultureArticleListItem }) {
 
 export function CultureScreen() {
   const { t } = useTranslation('tabs');
+  const insets = useSafeAreaInsets();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshingRef = useRef(false);
@@ -217,7 +218,10 @@ export function CultureScreen() {
             contentContainerStyle={{
               paddingTop: sections.length > 0 ? 52 : 8,
               paddingHorizontal: 20,
-              paddingBottom: 32,
+              // Ensure the last article can always be scrolled fully above the
+              // bottom system UI (home indicator / nav bar). The tab bar takes 60px
+              // in the layout flow; insets.bottom covers any remaining system gap.
+              paddingBottom: 32 + insets.bottom,
               gap: 16,
             }}
           >

@@ -3,6 +3,7 @@ import { create } from 'zustand';
 export interface DiveSessionRun {
   id: string;
   templateId: string;
+  templateSlug?: string;
   templateTitle: string;
   completedAt: string;
   holdSeconds: number;

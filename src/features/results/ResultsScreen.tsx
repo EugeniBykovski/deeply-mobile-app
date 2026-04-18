@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { ScrollView, View, RefreshControl, Pressable } from "react-native";
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
@@ -112,6 +113,31 @@ function formatSeconds(s: number | null): string {
   return `${sec}s`;
 }
 
+function continueItem(item: RecentRunItem) {
+  if (item.type === "dive" && item.templateSlug) {
+    router.push({
+      pathname: "/dive/[slug]",
+      params: { slug: item.templateSlug },
+    } as any);
+  } else if (
+    item.type === "training" &&
+    item.templateSlug &&
+    item.programSlug
+  ) {
+    router.push({
+      pathname: "/train/[slug]/[trainingSlug]",
+      params: { slug: item.programSlug, trainingSlug: item.templateSlug },
+    } as any);
+  }
+}
+
+function canContinue(item: RecentRunItem): boolean {
+  if (item.completed) return false;
+  if (item.type === "dive") return !!item.templateSlug;
+  if (item.type === "training") return !!(item.templateSlug && item.programSlug);
+  return false;
+}
+
 function RecentRunRow({ item }: { item: RecentRunItem }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -119,6 +145,7 @@ function RecentRunRow({ item }: { item: RecentRunItem }) {
   const iconName = item.completed ? "checkmark-circle-fill" : "clock-fill";
   const typeIcon = item.type === "dive" ? "water-drop-1" : "stopwatch";
   const duration = formatSeconds(item.totalSeconds);
+  const resumable = canContinue(item);
 
   const date = new Date(item.startedAt);
   const formattedDate = date.toLocaleDateString(undefined, {
@@ -269,6 +296,38 @@ function RecentRunRow({ item }: { item: RecentRunItem }) {
                 {item.completed ? "Completed" : "Incomplete"}
               </AppText>
             </View>
+
+            {/* Continue button — only for resumable incomplete items */}
+            {resumable && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  continueItem(item);
+                }}
+                className="active:opacity-75"
+                style={{
+                  marginTop: 4,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  backgroundColor: `${colors.accent}18`,
+                  borderWidth: 1,
+                  borderColor: `${colors.accent}40`,
+                  borderRadius: 10,
+                  paddingVertical: 10,
+                }}
+              >
+                <LiIcon name="play" size={13} color={colors.accent} />
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  style={{ color: colors.accent }}
+                >
+                  Continue
+                </AppText>
+              </Pressable>
+            )}
           </View>
         )}
       </View>
@@ -364,6 +423,8 @@ export function ResultsScreen() {
     completed: r.completed,
     title: r.trainingName,
     totalSeconds: r.totalSeconds > 0 ? r.totalSeconds : null,
+    templateSlug: r.trainingSlug ?? null,
+    programSlug: r.programSlug ?? null,
   }));
 
   const localDiveItems: RecentRunItem[] = localDiveRuns.map((r) => ({
@@ -374,6 +435,8 @@ export function ResultsScreen() {
     title: r.templateTitle,
     totalSeconds: r.holdSeconds > 0 ? r.holdSeconds : null,
     maxDepthMeters: r.maxDepthReached > 0 ? r.maxDepthReached : null,
+    templateSlug: r.templateSlug ?? null,
+    programSlug: null,
   }));
 
   // Filter out backend runs that match a local run (same title within 5 min)

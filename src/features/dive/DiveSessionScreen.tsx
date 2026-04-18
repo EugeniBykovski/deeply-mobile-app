@@ -52,12 +52,14 @@ export function DiveSessionScreen() {
 
   const params = useLocalSearchParams<{
     id: string;
+    slug: string;
     title: string;
     maxDepthMeters: string;
     targetHoldSeconds: string;
   }>();
 
   const templateId = params.id ?? "";
+  const templateSlug = params.slug ?? "";
   const title = params.title ?? "Dive";
   const maxDepthMeters = Number(params.maxDepthMeters ?? 30);
   const targetHoldSeconds = Number(params.targetHoldSeconds ?? 120);
@@ -195,6 +197,7 @@ export function DiveSessionScreen() {
     addDiveRun({
       id: `dive-local-${Date.now()}`,
       templateId,
+      templateSlug,
       templateTitle: title,
       completedAt: new Date().toISOString(),
       holdSeconds: finalHold,

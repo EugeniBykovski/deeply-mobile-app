@@ -192,6 +192,10 @@ export interface RecentRunItem {
   totalSeconds: number | null;
   /** Dive runs only */
   maxDepthMeters?: number | null;
+  /** Slug of the template — used to navigate to detail/resume screen */
+  templateSlug?: string | null;
+  /** Program slug — PRESET training runs only */
+  programSlug?: string | null;
 }
 
 // ─── Dive ─────────────────────────────────────────────────────────────────────

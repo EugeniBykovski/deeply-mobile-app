@@ -14,6 +14,8 @@ export interface SessionRun {
   id: string;
   trainingId: string;
   trainingName: string;
+  trainingSlug?: string;
+  programSlug?: string;
   completedAt: string;
   totalSeconds: number;
   completed: boolean;
