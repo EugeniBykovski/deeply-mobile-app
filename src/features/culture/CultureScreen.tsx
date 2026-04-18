@@ -195,31 +195,19 @@ export function CultureScreen() {
           onRetry={handleRefresh}
         />
       ) : (
-        <ScrollView
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={
-                (sectionsQuery.isFetching || articlesQuery.isFetching) && !isLoading
-              }
-              onRefresh={handleRefresh}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          }
-        >
-          {/* Section filter chips */}
+        <>
+          {/* Sticky filter row — outside the ScrollView so it never scrolls away */}
           {sections.length > 0 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{
                 paddingHorizontal: 20,
-                paddingBottom: 14,
+                paddingBottom: 12,
                 paddingTop: 4,
                 gap: 8,
               }}
+              style={{ flexShrink: 0 }}
             >
               <FilterChip
                 label={t('culture_all', { defaultValue: 'All' })}
@@ -239,19 +227,33 @@ export function CultureScreen() {
             </ScrollView>
           )}
 
-          {/* Articles */}
-          {articles.length === 0 ? (
-            <EmptyView message={t('culture_empty')} />
-          ) : (
-            <View style={{ paddingHorizontal: 20, gap: 16 }}>
-              {articles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
-              ))}
-            </View>
-          )}
-
-          <View className="h-8" />
-        </ScrollView>
+          {/* Scrollable articles */}
+          <ScrollView
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={
+                  (sectionsQuery.isFetching || articlesQuery.isFetching) && !isLoading
+                }
+                onRefresh={handleRefresh}
+                tintColor={colors.accent}
+                colors={[colors.accent]}
+              />
+            }
+          >
+            {articles.length === 0 ? (
+              <EmptyView message={t('culture_empty')} />
+            ) : (
+              <View style={{ paddingHorizontal: 20, gap: 16 }}>
+                {articles.map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
+              </View>
+            )}
+            <View className="h-8" />
+          </ScrollView>
+        </>
       )}
     </SafeAreaView>
   );
