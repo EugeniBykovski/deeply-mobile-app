@@ -1,15 +1,5 @@
-/**
- * Paywall modal — presents the RevenueCat paywall.
- *
- * Navigation:
- *   router.push('/paywall')              — always shows paywall
- *   router.push('/paywall?check=true')   — only shows if not already Pro
- *
- * The screen closes automatically after purchase/dismiss because
- * RevenueCatUI.presentPaywall() handles its own presentation.
- */
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePurchases } from '@/features/purchases/usePurchases';
@@ -21,17 +11,20 @@ export default function PaywallScreen() {
 
   useEffect(() => {
     async function open() {
-      let result: PAYWALL_RESULT;
-
-      if (check === 'true') {
-        result = await presentPaywallIfNeeded();
-      } else {
-        result = await presentPaywall();
-      }
-
-      // After the paywall closes (any result) return to the previous screen
-      if (router.canGoBack()) {
-        router.back();
+      try {
+        if (check === 'true') {
+          await presentPaywallIfNeeded();
+        } else {
+          await presentPaywall();
+        }
+      } catch (err: any) {
+        const msg =
+          err?.message ?? 'Could not open the paywall. Please try again later.';
+        Alert.alert('Subscription unavailable', msg);
+      } finally {
+        if (router.canGoBack()) {
+          router.back();
+        }
       }
     }
 
@@ -39,7 +32,6 @@ export default function PaywallScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Show a loader while RevenueCatUI prepares the paywall sheet
   return (
     <View
       style={{

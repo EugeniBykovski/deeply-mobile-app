@@ -44,7 +44,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
 
     Purchases.configure({
       apiKey: env.rcAppleKey,
-      appUserID: userId ?? null, // null = anonymous until sign-in
+      appUserID: userId || undefined, // undefined = anonymous until sign-in
     });
 
     // Listen for real-time entitlement updates (e.g. subscription renewal)
@@ -64,6 +64,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
   },
 
   async identify(userId) {
+    if (!userId) return;
     try {
       const { customerInfo } = await Purchases.logIn(userId);
       const isActive = customerInfo.entitlements.active[PRO_ENTITLEMENT] !== undefined;

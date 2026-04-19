@@ -23,6 +23,9 @@ const SYMBOL_MAP: Record<string, string> = {
   diver: "figure.scuba.diving",
   "trend-up-1": "chart.line.uptrend.xyaxis",
   "books-2": "books.vertical",
+  newapi: "sparkles",
+  sparkles: "sparkles",
+  crown: "crown",
 
   // Goal stage
   aimass: "scope",

@@ -256,7 +256,7 @@ export function SettingsScreen() {
             />
           ) : (
             <Row
-              icon="sparkles"
+              icon="newapi"
               label={t("upgrade_to_pro")}
               onPress={() => router.push("/paywall" as any)}
               last
