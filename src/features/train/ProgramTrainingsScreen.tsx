@@ -201,6 +201,11 @@ function TrainingCard({
                 {t("train_duration", { min: item.estimatedMinutes })}
               </AppText>
             )}
+            {item.repeats != null && item.repeats > 1 && (
+              <AppText variant="caption" muted>
+                {t("train_rounds", { count: item.repeats })}
+              </AppText>
+            )}
             {item.isLocked && (
               <AppText variant="caption" style={{ color: colors.warning }}>
                 {t("train_locked")}

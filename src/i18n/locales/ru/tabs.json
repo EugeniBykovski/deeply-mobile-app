@@ -17,6 +17,7 @@
   "train_unlock": "Открыть",
   "train_intensity": "Интенсивность",
   "train_duration": "~{{min}} мин",
+  "train_rounds": "× {{count}}",
   "train_points": "{{count}} шагов",
   "train_start": "Начать тренировку",
   "train_locked_title": "Премиум тренировка",

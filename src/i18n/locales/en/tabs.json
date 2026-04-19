@@ -17,6 +17,7 @@
   "train_unlock": "Unlock",
   "train_intensity": "Intensity",
   "train_duration": "~{{min}} min",
+  "train_rounds": "× {{count}}",
   "train_points": "{{count}} pts",
   "train_start": "Start Training",
   "train_locked_title": "Premium Training",

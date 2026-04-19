@@ -98,6 +98,7 @@ export interface TrainingListItem {
   isLocked: boolean;
   estimatedMinutes?: number | null;
   intensityLevel?: number | null;
+  repeats?: number | null;
   /** null when user is not authenticated or has no runs for this training */
   lastRunStatus: TrainingRunStatus;
   lang: string;

@@ -106,8 +106,10 @@ function SnakeVisualization({
   const phaseColor = PHASE_COLORS[steps[stepIndex]?.phase ?? 'REST'] ?? colors.accent;
 
   // Animate ball along current segment based on elapsed progress within step.
-  // This mirrors the circle approach: fires every second tick, targets the
-  // interpolated position with a 950ms timing so it never gaps.
+  // On step start (elapsed === 0) we cancel any in-flight animation and snap
+  // the ball to the segment's start waypoint so it stays in sync with the
+  // line colour change. Within a step we animate smoothly toward the current
+  // interpolated position with a 950ms window.
   useEffect(() => {
     if (runState !== 'running' || !steps[stepIndex]) return;
 
@@ -118,14 +120,20 @@ function SnakeVisualization({
     const from = waypoints[stepIndex]     ?? { x: 0, y: 0 };
     const to   = waypoints[stepIndex + 1] ?? from;
 
-    ballX.value = withTiming(from.x + (to.x - from.x) * progress, {
-      duration: 950,
-      easing: Easing.linear,
-    });
-    ballY.value = withTiming(from.y + (to.y - from.y) * progress, {
-      duration: 950,
-      easing: Easing.linear,
-    });
+    const targetX = from.x + (to.x - from.x) * progress;
+    const targetY = from.y + (to.y - from.y) * progress;
+
+    if (elapsed <= 0) {
+      // New step just started — snap ball to segment start so it's always
+      // in sync with the line colour switch.
+      cancelAnimation(ballX);
+      cancelAnimation(ballY);
+      ballX.value = targetX;
+      ballY.value = targetY;
+    } else {
+      ballX.value = withTiming(targetX, { duration: 950, easing: Easing.linear });
+      ballY.value = withTiming(targetY, { duration: 950, easing: Easing.linear });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, stepIndex, runState]);
 
