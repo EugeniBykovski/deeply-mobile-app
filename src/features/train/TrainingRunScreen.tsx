@@ -106,10 +106,8 @@ function SnakeVisualization({
   const phaseColor = PHASE_COLORS[steps[stepIndex]?.phase ?? 'REST'] ?? colors.accent;
 
   // Animate ball along current segment based on elapsed progress within step.
-  // On step start (elapsed === 0) we cancel any in-flight animation and snap
-  // the ball to the segment's start waypoint so it stays in sync with the
-  // line colour change. Within a step we animate smoothly toward the current
-  // interpolated position with a 950ms window.
+  // Fires every second tick, targets the interpolated position with a 950ms
+  // timing so it never gaps.
   useEffect(() => {
     if (runState !== 'running' || !steps[stepIndex]) return;
 
@@ -120,20 +118,14 @@ function SnakeVisualization({
     const from = waypoints[stepIndex]     ?? { x: 0, y: 0 };
     const to   = waypoints[stepIndex + 1] ?? from;
 
-    const targetX = from.x + (to.x - from.x) * progress;
-    const targetY = from.y + (to.y - from.y) * progress;
-
-    if (elapsed <= 0) {
-      // New step just started — snap ball to segment start so it's always
-      // in sync with the line colour switch.
-      cancelAnimation(ballX);
-      cancelAnimation(ballY);
-      ballX.value = targetX;
-      ballY.value = targetY;
-    } else {
-      ballX.value = withTiming(targetX, { duration: 950, easing: Easing.linear });
-      ballY.value = withTiming(targetY, { duration: 950, easing: Easing.linear });
-    }
+    ballX.value = withTiming(from.x + (to.x - from.x) * progress, {
+      duration: 950,
+      easing: Easing.linear,
+    });
+    ballY.value = withTiming(from.y + (to.y - from.y) * progress, {
+      duration: 950,
+      easing: Easing.linear,
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, stepIndex, runState]);
 
@@ -290,6 +282,7 @@ export function TrainingRunScreen() {
     estimatedMinutes: string;
     slug: string;
     programSlug: string;
+    repeats: string;
   }>();
 
   const steps: TrainingStep[] = params.steps ? JSON.parse(params.steps) : [];
@@ -297,14 +290,16 @@ export function TrainingRunScreen() {
   const trainingName  = params.name ?? 'Training';
   const trainingSlug  = params.slug;
   const programSlug   = params.programSlug;
+  const totalRounds   = Math.max(1, parseInt(params.repeats ?? '1', 10) || 1);
 
   const { visualizationMode, setVisualizationMode } = useTrainingPrefsStore();
   const { addRun, setInProgress } = useTrainingSessionStore();
 
-  const [runState,  setRunState]  = useState<RunState>('idle');
-  const [stepIndex, setStepIndex] = useState(0);
-  const [timeLeft,  setTimeLeft]  = useState(steps[0]?.durationSeconds ?? 0);
-  const [elapsed,   setElapsed]   = useState(0);
+  const [runState,    setRunState]    = useState<RunState>('idle');
+  const [stepIndex,   setStepIndex]   = useState(0);
+  const [roundIndex,  setRoundIndex]  = useState(0);
+  const [timeLeft,    setTimeLeft]    = useState(steps[0]?.durationSeconds ?? 0);
+  const [elapsed,     setElapsed]     = useState(0);
 
   const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef       = useRef(0);
@@ -430,19 +425,36 @@ export function TrainingRunScreen() {
 
   // ─── Step advance ──────────────────────────────────────────────────────────────
 
+  const roundIndexRef = useRef(0);
+
   const advance = useCallback(() => {
-    setStepIndex((prev) => {
-      const next = prev + 1;
-      if (next >= steps.length) {
+    setStepIndex((prevStep) => {
+      const nextStep = prevStep + 1;
+      if (nextStep < steps.length) {
+        setTimeLeft(steps[nextStep].durationSeconds);
+        return nextStep;
+      }
+
+      // End of one round
+      const nextRound = roundIndexRef.current + 1;
+      if (nextRound >= totalRounds) {
+        // All rounds done
         stopInterval();
         setRunState('done');
         pendingFinishRef.current = true;
-        return prev;
+        return prevStep;
       }
-      setTimeLeft(steps[next].durationSeconds);
-      return next;
+
+      // Start next round
+      roundIndexRef.current = nextRound;
+      setRoundIndex(nextRound);
+      ballX.value = snakeWaypoints[0]?.x ?? 0;
+      ballY.value = snakeWaypoints[0]?.y ?? 0;
+      setTimeLeft(steps[0].durationSeconds);
+      return 0;
     });
-  }, [steps, stopInterval]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, totalRounds, stopInterval]);
 
   // Call finishRun outside of a state-updater callback to avoid
   // "update while rendering" errors from the Zustand store update.
@@ -520,6 +532,7 @@ export function TrainingRunScreen() {
   const isIdle    = runState === 'idle';
   const isPaused  = runState === 'paused';
   const progress  = steps.length > 0 ? (stepIndex + 1) / steps.length : 0;
+  const showRounds = totalRounds > 1;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -609,7 +622,7 @@ export function TrainingRunScreen() {
               {formatTime(elapsed)}
             </AppText>
             <AppText variant="caption" muted>
-              {steps.length} {t('train_run_steps_completed')}
+              {steps.length * totalRounds} {t('train_run_steps_completed')}
             </AppText>
           </View>
 
@@ -727,9 +740,20 @@ export function TrainingRunScreen() {
               </View>
             )}
 
-            {/* Step counter + elapsed — only while active */}
+            {/* Step counter + round + elapsed — only while active */}
             {!isIdle && (
               <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                {showRounds && (
+                  <AppText
+                    weight="semibold"
+                    style={{ color: phaseColor, marginBottom: 2, letterSpacing: 0.3 }}
+                  >
+                    {t('train_run_round', {
+                      current: roundIndex + 1,
+                      total:   totalRounds,
+                    })}
+                  </AppText>
+                )}
                 <AppText variant="caption" muted>
                   {t('train_run_step', {
                     current: stepIndex + 1,

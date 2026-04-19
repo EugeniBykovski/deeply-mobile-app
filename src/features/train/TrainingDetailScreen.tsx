@@ -210,6 +210,7 @@ export function TrainingDetailScreen() {
         estimatedMinutes: String(training.estimatedMinutes ?? 0),
         slug: trainingSlug ?? '',
         programSlug: programSlug ?? '',
+        repeats: String(training.repeats ?? 1),
       },
     } as any);
   }

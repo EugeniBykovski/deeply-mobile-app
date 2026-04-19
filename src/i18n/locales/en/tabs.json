@@ -46,6 +46,7 @@
   "train_run_done": "Training Done!",
   "train_run_steps_completed": "steps completed",
   "train_run_step": "Step {{current}} / {{total}}",
+  "train_run_round": "Round {{current}} / {{total}}",
   "train_run_stop": "Stop",
   "train_run_pause": "Pause",
   "train_run_resume": "Resume",
