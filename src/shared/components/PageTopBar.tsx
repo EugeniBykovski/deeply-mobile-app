@@ -2,12 +2,15 @@ import React from "react";
 import { View } from "react-native";
 import { AppText } from "./AppText";
 import { ProfileButton } from "./ProfileButton";
+import { ProHeaderButton } from "./ProHeaderButton";
 
 interface PageTopBarProps {
   title: string;
   /** Render the profile avatar button on the right. Default true. */
   showProfile?: boolean;
-  /** Extra right-side content (replaces the profile button slot if provided). */
+  /** Show the Pro crown pill between the title and profile button. Default true. */
+  showPro?: boolean;
+  /** Extra right-side content (replaces the entire right slot when provided). */
   rightSlot?: React.ReactNode;
 }
 
@@ -27,6 +30,7 @@ interface PageTopBarProps {
 export const PageTopBar = React.memo(function PageTopBar({
   title,
   showProfile = true,
+  showPro = true,
   rightSlot,
 }: PageTopBarProps) {
   return (
@@ -48,7 +52,12 @@ export const PageTopBar = React.memo(function PageTopBar({
         {title}
       </AppText>
 
-      {rightSlot ?? (showProfile ? <ProfileButton /> : null)}
+      {rightSlot ?? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {showPro && <ProHeaderButton />}
+          {showProfile && <ProfileButton />}
+        </View>
+      )}
     </View>
   );
 });
