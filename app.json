@@ -3,6 +3,7 @@
     "name": "Deeply",
     "slug": "deeply-mobile",
     "version": "1.0.1",
+    "buildNumber": "1",
     "scheme": "deeply",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
