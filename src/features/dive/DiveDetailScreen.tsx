@@ -13,13 +13,13 @@ import { LiIcon } from "@/shared/components/LiIcon";
 
 import { diveService } from "@/api/services/dive.service";
 import type { DiveTemplate } from "@/api/types";
-import { i18n } from "@/i18n";
+import { useLang } from "@/hooks/useLang";
 import { colors } from "@/theme";
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 
 function useDiveTemplate(slug: string) {
-  const lang = i18n.language.startsWith("ru") ? "ru" : "en";
+  const lang = useLang();
   return useQuery({
     queryKey: ["dive", "template", slug, lang],
     queryFn: () => diveService.getTemplate(slug, { lang }),

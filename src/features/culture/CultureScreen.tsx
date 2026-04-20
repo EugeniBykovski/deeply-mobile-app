@@ -20,7 +20,7 @@ import { LiIcon } from '@/shared/components/LiIcon';
 import { PageTopBar } from '@/shared/components/PageTopBar';
 
 import { cultureService } from '@/api/services/culture.service';
-import { i18n } from '@/i18n';
+import { useLang } from '@/hooks/useLang';
 import type { CultureSection, CultureArticleListItem } from '@/api/types';
 import { colors } from '@/theme';
 
@@ -34,7 +34,7 @@ function useCultureSections() {
 }
 
 function useCultureArticles(section?: string) {
-  const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
+  const lang = useLang();
   return useQuery({
     queryKey: ['culture', 'articles', section ?? 'all', lang],
     queryFn: () =>

@@ -18,7 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 
 import { AppText } from '@/shared/components/AppText';
-import { LiIcon } from '@/shared/components/LiIcon';
+import { BackHeader } from '@/shared/components/BackHeader';
 import { trainService } from '@/api/services/train.service';
 import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
@@ -244,28 +244,7 @@ export function PrivateTrainingFormScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 16,
-            paddingTop: 16,
-            paddingBottom: 12,
-            gap: 12,
-          }}
-        >
-          <Pressable
-            onPress={() => router.back()}
-            className="active:opacity-60"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <LiIcon name="arrow-left" size={22} color={colors.ink} />
-          </Pressable>
-          <AppText variant="heading" weight="bold" style={{ flex: 1 }}>
-            {t('train_private_new')}
-          </AppText>
-        </View>
+        <BackHeader title={t('train_private_new')} bordered={false} />
 
 
         <ScrollView

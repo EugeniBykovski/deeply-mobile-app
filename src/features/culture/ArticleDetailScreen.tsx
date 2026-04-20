@@ -16,13 +16,13 @@ import { ErrorView } from '@/shared/components/ErrorView';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { cultureService } from '@/api/services/culture.service';
-import { i18n } from '@/i18n';
+import { useLang } from '@/hooks/useLang';
 import { colors } from '@/theme';
 
 const PLACEHOLDER_COLOR = '#122628';
 
 function useArticle(slug: string) {
-  const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
+  const lang = useLang();
   return useQuery({
     queryKey: ['culture', 'article', slug, lang],
     queryFn: () => cultureService.getArticle(slug, { lang }),

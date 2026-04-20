@@ -4,32 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { i18n } from '@/i18n';
 
 import { ErrorView } from '@/shared/components/ErrorView';
 import { Skeleton, SkeletonRow } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
-import { trainService } from '@/api/services/train.service';
-import type { TrainingDetail, TrainingStep } from '@/api/types';
+import { BackHeader } from '@/shared/components/BackHeader';
+import { useTrainingDetail } from './hooks/useTrainingDetail';
+import { PHASE_COLORS, PHASE_ICONS } from '@/constants/phase';
+import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
 
-// ─── Step visualization ───────────────────────────────────────────────────────
-
-const PHASE_COLORS: Record<string, string> = {
-  INHALE:  '#3BBFAD',
-  HOLD:    '#D4915A',
-  EXHALE:  '#5A8FBF',
-  REST:    '#6B9490',
-};
-
-const PHASE_ICONS: Record<string, string> = {
-  INHALE:  'water-drop-1',
-  HOLD:    'stopwatch',
-  EXHALE:  'beat',
-  REST:    'moon-half-right-5',
-};
+// ─── Step bar / legend ────────────────────────────────────────────────────────
 
 function StepsBar({ steps }: { steps: TrainingStep[] }) {
   const totalSeconds = steps.reduce((acc, s) => acc + s.durationSeconds, 0);
@@ -40,10 +26,7 @@ function StepsBar({ steps }: { steps: TrainingStep[] }) {
       {steps.map((step, idx) => (
         <View
           key={idx}
-          style={{
-            flex: step.durationSeconds,
-            backgroundColor: PHASE_COLORS[step.phase] ?? colors.primary,
-          }}
+          style={{ flex: step.durationSeconds, backgroundColor: PHASE_COLORS[step.phase] ?? colors.primary }}
         />
       ))}
     </View>
@@ -59,7 +42,6 @@ function StepLegend({ steps }: { steps: TrainingStep[] }) {
     REST:   t('train_phase_rest'),
   };
 
-  // Group by phase to show unique phases with total durations
   const seen = new Set<string>();
   const unique = steps.filter((s) => {
     if (seen.has(s.phase)) return false;
@@ -71,17 +53,8 @@ function StepLegend({ steps }: { steps: TrainingStep[] }) {
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 10 }}>
       {unique.map((s) => (
         <View key={s.phase} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 3,
-              backgroundColor: PHASE_COLORS[s.phase] ?? colors.primary,
-            }}
-          />
-          <AppText variant="caption" secondary>
-            {phaseLabel[s.phase] ?? s.phase}
-          </AppText>
+          <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: PHASE_COLORS[s.phase] ?? colors.primary }} />
+          <AppText variant="caption" secondary>{phaseLabel[s.phase] ?? s.phase}</AppText>
         </View>
       ))}
     </View>
@@ -105,24 +78,16 @@ function StepList({ steps }: { steps: TrainingStep[] }) {
         <View
           key={idx}
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            padding: 12,
-            backgroundColor: colors.surface,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: colors.border,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            padding: 12, backgroundColor: colors.surface,
+            borderRadius: 10, borderWidth: 1, borderColor: colors.border,
           }}
         >
           <View
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
+              width: 32, height: 32, borderRadius: 8,
               backgroundColor: `${PHASE_COLORS[step.phase] ?? colors.primary}22`,
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: 'center', justifyContent: 'center',
             }}
           >
             <LiIcon
@@ -136,16 +101,11 @@ function StepList({ steps }: { steps: TrainingStep[] }) {
               {phaseLabel[step.phase] ?? step.phase}
             </AppText>
           </View>
-          <AppText variant="caption" muted>
-            {step.durationSeconds}s
-          </AppText>
+          <AppText variant="caption" muted>{step.durationSeconds}s</AppText>
           <View
             style={{
-              width: step.durationSeconds * 2,
-              maxWidth: 80,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: PHASE_COLORS[step.phase] ?? colors.primary,
+              width: step.durationSeconds * 2, maxWidth: 80, height: 4,
+              borderRadius: 2, backgroundColor: PHASE_COLORS[step.phase] ?? colors.primary,
             }}
           />
         </View>
@@ -154,38 +114,23 @@ function StepList({ steps }: { steps: TrainingStep[] }) {
   );
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-
-function useTrainingDetail(slug: string) {
-  const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
-  return useQuery({
-    queryKey: ['train', 'detail', slug, lang],
-    queryFn: () => trainService.getTraining(slug, { lang }),
-    enabled: !!slug,
-  });
-}
+// ─── Summary chip ─────────────────────────────────────────────────────────────
 
 function SummaryChip({ label, value }: { label: string; value: string }) {
   return (
     <View
       style={{
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 10,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        alignItems: 'center',
-        flex: 1,
+        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+        borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', flex: 1,
       }}
     >
-      <AppText variant="caption" muted style={{ marginBottom: 2 }}>
-        {label}
-      </AppText>
+      <AppText variant="caption" muted style={{ marginBottom: 2 }}>{label}</AppText>
       <AppText weight="semibold">{value}</AppText>
     </View>
   );
 }
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function TrainingDetailScreen() {
   const { t } = useTranslation('tabs');
@@ -195,7 +140,7 @@ export function TrainingDetailScreen() {
     autoStart?: string;
   }>();
 
-  const query = useTrainingDetail(trainingSlug ?? '');
+  const query    = useTrainingDetail(trainingSlug ?? '');
   const training = query.data;
   const didAutoStart = useRef(false);
 
@@ -227,28 +172,7 @@ export function TrainingDetailScreen() {
     <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
       <StatusBar style="light" />
 
-      {/* Back header */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: 12,
-          gap: 12,
-        }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          className="active:opacity-60"
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <LiIcon name="arrow-left" size={22} color={colors.ink} />
-        </Pressable>
-        <AppText variant="heading" weight="bold" style={{ flex: 1 }} numberOfLines={1}>
-          {training?.title ?? ''}
-        </AppText>
-      </View>
+      <BackHeader title={training?.title ?? ''} bordered={false} />
 
       {query.isLoading ? (
         <View style={{ paddingHorizontal: 20, gap: 16 }}>
@@ -260,17 +184,11 @@ export function TrainingDetailScreen() {
           </View>
           <Skeleton width="100%" height={12} />
           <View style={{ gap: 8 }}>
-            {Array.from({ length: 6 }, (_, i) => (
-              <SkeletonRow key={i} badge />
-            ))}
+            {Array.from({ length: 6 }, (_, i) => <SkeletonRow key={i} badge />)}
           </View>
         </View>
       ) : query.isError || !training ? (
-        <ErrorView
-          fullScreen
-          message={t('error_connection', { ns: 'common' })}
-          onRetry={() => query.refetch()}
-        />
+        <ErrorView fullScreen message={t('error_connection', { ns: 'common' })} onRetry={() => query.refetch()} />
       ) : (
         <>
           <ScrollView
@@ -278,14 +196,10 @@ export function TrainingDetailScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           >
-            {/* Description */}
             {training.description ? (
-              <AppText secondary style={{ lineHeight: 22, marginBottom: 20 }}>
-                {training.description}
-              </AppText>
+              <AppText secondary style={{ lineHeight: 22, marginBottom: 20 }}>{training.description}</AppText>
             ) : null}
 
-            {/* Summary chips */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
               {training.estimatedMinutes != null && (
                 <SummaryChip
@@ -294,25 +208,16 @@ export function TrainingDetailScreen() {
                 />
               )}
               {training.intensityLevel != null && (
-                <SummaryChip
-                  label={t('train_intensity')}
-                  value={`${training.intensityLevel}/10`}
-                />
+                <SummaryChip label={t('train_intensity')} value={`${training.intensityLevel}/10`} />
               )}
               {training.pointCount != null && (
-                <SummaryChip
-                  label="Points"
-                  value={`${training.pointCount}`}
-                />
+                <SummaryChip label="Points" value={`${training.pointCount}`} />
               )}
             </View>
 
-            {/* Steps visualization */}
             {training.steps.length > 0 && (
               <View style={{ marginBottom: 24 }}>
-                <AppText weight="semibold" style={{ marginBottom: 12 }}>
-                  Sequence
-                </AppText>
+                <AppText weight="semibold" style={{ marginBottom: 12 }}>Sequence</AppText>
                 <StepsBar steps={training.steps} />
                 <StepLegend steps={training.steps} />
                 <View style={{ height: 20 }} />
@@ -321,26 +226,12 @@ export function TrainingDetailScreen() {
             )}
           </ScrollView>
 
-          {/* Start CTA */}
           {!training.isLocked && (
-            <View
-              style={{
-                paddingHorizontal: 20,
-                paddingBottom: 32,
-                paddingTop: 12,
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
-              }}
-            >
+            <View style={{ paddingHorizontal: 20, paddingBottom: 32, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
               <Pressable
                 onPress={handleStart}
                 className="active:opacity-80"
-                style={{
-                  backgroundColor: colors.accent,
-                  borderRadius: 16,
-                  paddingVertical: 16,
-                  alignItems: 'center',
-                }}
+                style={{ backgroundColor: colors.accent, borderRadius: 16, paddingVertical: 16, alignItems: 'center' }}
               >
                 <AppText weight="bold" style={{ color: colors.inkInverse, fontSize: 16 }}>
                   {t('train_start')}

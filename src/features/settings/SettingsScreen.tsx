@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { i18n } from "@/i18n";
 import { AppText } from "@/shared/components/AppText";
 import { LiIcon } from "@/shared/components/LiIcon";
+import { BackHeader } from "@/shared/components/BackHeader";
 import { useAuthStore } from "@/store/authStore";
 import { usePurchaseStore } from "@/store/purchaseStore";
 import { useOnboardingStore } from "@/store/onboardingStore";
@@ -228,22 +229,7 @@ export function SettingsScreen() {
     <SafeAreaView className="flex-1 bg-brand-bg" edges={["top", "bottom"]}>
       <StatusBar style="light" />
 
-      {/* Header row */}
-      <View
-        className="flex-row items-center px-4 py-3"
-        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          className="active:opacity-60 mr-3"
-        >
-          <LiIcon name="arrow-left" size={22} color={colors.ink} />
-        </Pressable>
-        <AppText variant="heading" weight="semibold">
-          {t("settings")}
-        </AppText>
-      </View>
+      <BackHeader title={t("settings")} />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="h-6" />
@@ -270,7 +256,22 @@ export function SettingsScreen() {
         {/* 2 ── Language ────────────────────────────────────────────────── */}
         <LanguageSection />
 
-        {/* 2 ── Account (sign-out) ─────────────────────────────────────── */}
+        {/* 2 ── Legal ─────────────────────────────────────── */}
+        <Section title={t("legal")}>
+          <Row
+            icon="file-text"
+            label={t("terms_of_service")}
+            onPress={() => router.push("/legal/terms" as any)}
+          />
+          <Row
+            icon="shield"
+            label={t("privacy_policy")}
+            onPress={() => router.push("/legal/privacy" as any)}
+            last
+          />
+        </Section>
+
+        {/* 3 ── Account (sign-out) ──────────────────────────────────────────────────── */}
         {isAuthenticated && (
           <Section title={t("profile")}>
             <Row
@@ -284,7 +285,7 @@ export function SettingsScreen() {
           </Section>
         )}
 
-        {/* 3 ── Delete Account ──────────────────────────────────────────── */}
+        {/* 4 ── Delete Account ──────────────────────────────────────────── */}
         <Section
           title={t("delete_account")}
           description={t("delete_account_section_hint")}

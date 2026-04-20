@@ -6,11 +6,13 @@ import enCommon from './locales/en/common.json';
 import enOnboarding from './locales/en/onboarding.json';
 import enAuth from './locales/en/auth.json';
 import enTabs from './locales/en/tabs.json';
+import enLegal from './locales/en/legal.json';
 
 import ruCommon from './locales/ru/common.json';
 import ruOnboarding from './locales/ru/onboarding.json';
 import ruAuth from './locales/ru/auth.json';
 import ruTabs from './locales/ru/tabs.json';
+import ruLegal from './locales/ru/legal.json';
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -30,12 +32,14 @@ i18n.use(initReactI18next).init({
       onboarding: enOnboarding,
       auth: enAuth,
       tabs: enTabs,
+      legal: enLegal,
     },
     ru: {
       common: ruCommon,
       onboarding: ruOnboarding,
       auth: ruAuth,
       tabs: ruTabs,
+      legal: ruLegal,
     },
   },
   defaultNS: 'common',

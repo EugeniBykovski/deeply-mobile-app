@@ -1,38 +1,19 @@
 import React, { useCallback, useState } from 'react';
-import {
-  FlatList,
-  Modal,
-  Pressable,
-  RefreshControl,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 
 import { ErrorView } from '@/shared/components/ErrorView';
 import { SkeletonRow } from '@/shared/components/Skeleton';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { PageTopBar } from '@/shared/components/PageTopBar';
-
-import { diveService } from '@/api/services/dive.service';
+import { LockedSheet } from '@/shared/components/LockedSheet';
+import { useDiveTemplates } from './hooks/useDiveTemplates';
 import type { DiveTemplateItem } from '@/api/types';
-import { i18n } from '@/i18n';
 import { colors } from '@/theme';
-
-// ─── Query ────────────────────────────────────────────────────────────────────
-
-function useDiveTemplates() {
-  const lang = i18n.language.startsWith('ru') ? 'ru' : 'en';
-  return useQuery({
-    queryKey: ['dive', 'templates', lang],
-    queryFn: () => diveService.getTemplates({ lang }),
-    select: (d) => d.items,
-  });
-}
 
 // ─── Difficulty helpers ───────────────────────────────────────────────────────
 
@@ -57,97 +38,16 @@ function formatHold(s: number): string {
   return `${sec}s`;
 }
 
-// ─── Locked sheet ─────────────────────────────────────────────────────────────
-
-function LockedSheet({
-  visible,
-  onClose,
-}: {
-  visible: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation('tabs');
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
-        onPress={onClose}
-      >
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 28,
-              paddingBottom: 44,
-              alignItems: 'center',
-            }}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                backgroundColor: `${colors.warning}22`,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 16,
-              }}
-            >
-              <LiIcon name="lock" size={22} color={colors.warning} />
-            </View>
-            <AppText variant="heading" weight="bold" style={{ marginBottom: 10, textAlign: 'center' }}>
-              {t('dive_locked_title')}
-            </AppText>
-            <AppText secondary style={{ textAlign: 'center', lineHeight: 22, marginBottom: 24 }}>
-              {t('dive_locked_body')}
-            </AppText>
-            <Pressable
-              onPress={onClose}
-              className="active:opacity-75"
-              style={{
-                backgroundColor: colors.primary,
-                borderRadius: 14,
-                paddingVertical: 14,
-                paddingHorizontal: 40,
-              }}
-            >
-              <AppText weight="semibold" style={{ color: colors.ink }}>
-                {t('dive_locked_cta')}
-              </AppText>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
 // ─── Dive card ────────────────────────────────────────────────────────────────
 
-function DiveCard({
-  item,
-  onLockedPress,
-}: {
-  item: DiveTemplateItem;
-  onLockedPress: () => void;
-}) {
+function DiveCard({ item, onLockedPress }: { item: DiveTemplateItem; onLockedPress: () => void }) {
   const diffColor = DIFFICULTY_COLOR[item.difficulty] ?? colors.accent;
 
   function handlePress() {
     if (item.isLocked) {
       onLockedPress();
     } else {
-      router.push({
-        pathname: '/dive/[slug]',
-        params: { slug: item.slug },
-      } as any);
+      router.push({ pathname: '/dive/[slug]', params: { slug: item.slug } } as any);
     }
   }
 
@@ -166,16 +66,11 @@ function DiveCard({
           opacity: item.isLocked ? 0.6 : 1,
         }}
       >
-        {/* Depth badge */}
         <View
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
+            width: 52, height: 52, borderRadius: 14,
             backgroundColor: item.isLocked ? colors.border : `${diffColor}18`,
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}
         >
           {item.isLocked ? (
@@ -185,49 +80,30 @@ function DiveCard({
               <AppText weight="bold" style={{ color: diffColor, fontSize: 16, lineHeight: 20 }}>
                 {item.maxDepthMeters}
               </AppText>
-              <AppText variant="label" style={{ color: diffColor, opacity: 0.8 }}>
-                m
-              </AppText>
+              <AppText variant="label" style={{ color: diffColor, opacity: 0.8 }}>m</AppText>
             </>
           )}
         </View>
 
-        {/* Info */}
         <View style={{ flex: 1 }}>
-          <AppText weight="semibold" numberOfLines={1}>
-            {item.title}
-          </AppText>
+          <AppText weight="semibold" numberOfLines={1}>{item.title}</AppText>
           {item.subtitle ? (
             <AppText variant="caption" secondary numberOfLines={1} style={{ marginTop: 1 }}>
               {item.subtitle}
             </AppText>
           ) : null}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 6, alignItems: 'center' }}>
-            <View
-              style={{
-                paddingHorizontal: 7,
-                paddingVertical: 2,
-                borderRadius: 6,
-                backgroundColor: `${diffColor}18`,
-              }}
-            >
-              <AppText variant="label" style={{ color: diffColor }}>
-                {difficultyLabel(item.difficulty)}
-              </AppText>
+            <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: `${diffColor}18` }}>
+              <AppText variant="label" style={{ color: diffColor }}>{difficultyLabel(item.difficulty)}</AppText>
             </View>
             {item.targetHoldSeconds != null && (
-              <AppText variant="caption" muted>
-                {formatHold(item.targetHoldSeconds)} hold
-              </AppText>
+              <AppText variant="caption" muted>{formatHold(item.targetHoldSeconds)} hold</AppText>
             )}
           </View>
         </View>
 
-        {/* Right indicator */}
         {item.isLocked ? (
-          <AppText variant="label" style={{ color: colors.warning }}>
-            Premium
-          </AppText>
+          <AppText variant="label" style={{ color: colors.warning }}>Premium</AppText>
         ) : (
           <LiIcon name="chevron-right" size={14} color={colors.inkMuted} />
         )}
@@ -236,7 +112,7 @@ function DiveCard({
   );
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// ─── Section label ────────────────────────────────────────────────────────────
 
 function SectionLabel({ title, count }: { title: string; count: number }) {
   return (
@@ -284,11 +160,7 @@ export function DiveScreen() {
           {Array.from({ length: 10 }, (_, i) => <SkeletonRow key={i} badge />)}
         </View>
       ) : query.isError ? (
-        <ErrorView
-          fullScreen
-          message={t('error_connection', { ns: 'common' })}
-          onRetry={handleRefresh}
-        />
+        <ErrorView fullScreen message={t('error_connection', { ns: 'common' })} onRetry={handleRefresh} />
       ) : (
         <FlatList
           data={listData}
@@ -316,7 +188,13 @@ export function DiveScreen() {
         />
       )}
 
-      <LockedSheet visible={lockedVisible} onClose={() => setLockedVisible(false)} />
+      <LockedSheet
+        visible={lockedVisible}
+        onClose={() => setLockedVisible(false)}
+        title={t('dive_locked_title')}
+        body={t('dive_locked_body')}
+        ctaLabel={t('dive_locked_cta')}
+      />
     </SafeAreaView>
   );
 }

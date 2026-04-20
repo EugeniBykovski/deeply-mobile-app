@@ -24,5 +24,8 @@
   "english": "English",
   "russian": "Русский",
   "upgrade_to_pro": "Перейти на Pro",
-  "manage_subscription": "Управление подпиской"
+  "manage_subscription": "Управление подпиской",
+  "legal": "Юридическое",
+  "terms_of_service": "Условия использования",
+  "privacy_policy": "Политика конфиденциальности"
 }

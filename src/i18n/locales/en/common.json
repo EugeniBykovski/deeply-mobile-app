@@ -24,5 +24,8 @@
   "english": "English",
   "russian": "Русский",
   "upgrade_to_pro": "Upgrade to Pro",
-  "manage_subscription": "Manage Subscription"
+  "manage_subscription": "Manage Subscription",
+  "legal": "Legal",
+  "terms_of_service": "Terms of Service",
+  "privacy_policy": "Privacy Policy"
 }
