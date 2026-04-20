@@ -105,6 +105,12 @@ interface OnboardingState {
   markSignedIn: () => void;
   /** Resets questionnaire progress. Does NOT clear `hasEverSignedIn`. */
   reset: () => void;
+  /**
+   * Full reset — clears all onboarding state including `hasEverSignedIn`.
+   * Use after account deletion so the user is routed through the full
+   * onboarding + sign-up flow rather than the returning-user screen.
+   */
+  resetFull: () => void;
 }
 
 const initialData: OnboardingData = {
@@ -143,6 +149,10 @@ export const useOnboardingStore = create<OnboardingState>()(
       // reset() intentionally preserves hasEverSignedIn — it is device history,
       // not questionnaire state.
       reset: () => set({ isCompleted: false, data: initialData }),
+
+      // resetFull() clears everything including hasEverSignedIn, used after
+      // account deletion so the user goes through the full onboarding flow.
+      resetFull: () => set({ isCompleted: false, hasEverSignedIn: false, data: initialData }),
     }),
     {
       name: 'deeply-onboarding',

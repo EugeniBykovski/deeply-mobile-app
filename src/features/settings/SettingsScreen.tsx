@@ -15,6 +15,7 @@ import { AppText } from "@/shared/components/AppText";
 import { LiIcon } from "@/shared/components/LiIcon";
 import { useAuthStore } from "@/store/authStore";
 import { usePurchaseStore } from "@/store/purchaseStore";
+import { useOnboardingStore } from "@/store/onboardingStore";
 import { authService } from "@/api/services/auth.service";
 import { colors } from "@/theme";
 
@@ -192,6 +193,7 @@ export function SettingsScreen() {
   const { t } = useTranslation("common");
   const { clearAuth, isAuthenticated } = useAuthStore();
   const isPro = usePurchaseStore((s) => s.isPro);
+  const resetOnboarding = useOnboardingStore((s) => s.resetFull);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleLogout = useCallback(async () => {
@@ -210,7 +212,8 @@ export function SettingsScreen() {
           try {
             await authService.deleteAccount();
             await clearAuth();
-            router.replace("/signin" as any);
+            resetOnboarding();
+            router.replace("/(onboarding)" as any);
           } catch {
             Alert.alert(t("error_generic"), t("error_connection"));
           } finally {
@@ -219,7 +222,7 @@ export function SettingsScreen() {
         },
       },
     ]);
-  }, [t, clearAuth]);
+  }, [t, clearAuth, resetOnboarding]);
 
   return (
     <SafeAreaView className="flex-1 bg-brand-bg" edges={["top", "bottom"]}>
