@@ -211,6 +211,7 @@ export function TrainingDetailScreen() {
         slug: trainingSlug ?? '',
         programSlug: programSlug ?? '',
         repeats: String(training.repeats ?? 1),
+        saveCO2: training.saveCO2 ? '1' : '0',
       },
     } as any);
   }

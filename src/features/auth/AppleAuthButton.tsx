@@ -10,14 +10,20 @@ interface AppleAuthButtonProps {
   onPress: () => void;
   isLoading?: boolean;
   error?: string | null;
+  variant?: 'sign_in' | 'sign_up';
 }
 
 export function AppleAuthButton({
   onPress,
   isLoading = false,
   error,
+  variant = 'sign_in',
 }: AppleAuthButtonProps) {
   const { t } = useTranslation('auth');
+
+  const buttonType = variant === 'sign_up'
+    ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+    : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN;
 
   if (Platform.OS !== 'ios') {
     return (
@@ -37,7 +43,7 @@ export function AppleAuthButton({
         </View>
       ) : (
         <AppleAuthentication.AppleAuthenticationButton
-          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+          buttonType={buttonType}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
           cornerRadius={14}
           style={{ width: '100%', height: 56 }}

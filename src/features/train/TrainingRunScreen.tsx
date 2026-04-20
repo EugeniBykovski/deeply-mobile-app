@@ -283,6 +283,7 @@ export function TrainingRunScreen() {
     slug: string;
     programSlug: string;
     repeats: string;
+    saveCO2: string;
   }>();
 
   const steps: TrainingStep[] = params.steps ? JSON.parse(params.steps) : [];
@@ -291,6 +292,7 @@ export function TrainingRunScreen() {
   const trainingSlug  = params.slug;
   const programSlug   = params.programSlug;
   const totalRounds   = Math.max(1, parseInt(params.repeats ?? '1', 10) || 1);
+  const trackCO2      = params.saveCO2 === '1';
 
   const { visualizationMode, setVisualizationMode } = useTrainingPrefsStore();
   const { addRun, setInProgress } = useTrainingSessionStore();
@@ -300,6 +302,7 @@ export function TrainingRunScreen() {
   const [roundIndex,  setRoundIndex]  = useState(0);
   const [timeLeft,    setTimeLeft]    = useState(steps[0]?.durationSeconds ?? 0);
   const [elapsed,     setElapsed]     = useState(0);
+  const [co2Score,    setCo2Score]    = useState<number | null>(null);
 
   const intervalRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedRef       = useRef(0);
@@ -382,7 +385,7 @@ export function TrainingRunScreen() {
   // ─── Run persistence ──────────────────────────────────────────────────────────
 
   const finishRun = useCallback(
-    async (completed: boolean) => {
+    async (completed: boolean, metrics?: Record<string, unknown>) => {
       if (isSavingRef.current) return;
       isSavingRef.current = true;
 
@@ -405,6 +408,7 @@ export function TrainingRunScreen() {
           await trainService.updateRun(runIdRef.current, {
             completed,
             totalSeconds: elapsedRef.current > 0 ? elapsedRef.current : undefined,
+            ...(metrics ? { metrics } : {}),
           });
         } else if (trainingId) {
           await trainService.saveRun({
@@ -458,11 +462,16 @@ export function TrainingRunScreen() {
 
   // Call finishRun outside of a state-updater callback to avoid
   // "update while rendering" errors from the Zustand store update.
+  // When CO2 tracking is enabled, we wait for the user to rate before saving,
+  // so auto-finish is skipped — handleDone will call finishRun instead.
   useEffect(() => {
     if (runState === 'done' && pendingFinishRef.current) {
       pendingFinishRef.current = false;
-      finishRun(true);
+      if (!trackCO2) {
+        finishRun(true);
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runState, finishRun]);
 
   useEffect(() => {
@@ -522,7 +531,10 @@ export function TrainingRunScreen() {
     router.back();
   }
 
-  function handleDone() {
+  async function handleDone() {
+    if (trackCO2) {
+      await finishRun(true, co2Score != null ? { co2Score } : undefined);
+    }
     router.back();
   }
 
@@ -624,6 +636,48 @@ export function TrainingRunScreen() {
             <AppText variant="caption" muted>
               {steps.length * totalRounds} {t('train_run_steps_completed')}
             </AppText>
+
+            {/* CO₂ rating — only when trackCO2 is enabled */}
+            {trackCO2 && (
+              <View style={{ marginTop: 28, width: '100%', alignItems: 'center' }}>
+                <AppText weight="semibold" style={{ marginBottom: 4 }}>
+                  {t('train_co2_rating_title')}
+                </AppText>
+                <AppText variant="caption" secondary style={{ marginBottom: 16, textAlign: 'center' }}>
+                  {t('train_co2_rating_hint')}
+                </AppText>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const score = i + 1;
+                    const selected = co2Score === score;
+                    return (
+                      <Pressable
+                        key={score}
+                        onPress={() => setCo2Score(score)}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: selected ? colors.accent : colors.surface,
+                          borderWidth: 1,
+                          borderColor: selected ? colors.accent : colors.border,
+                        }}
+                      >
+                        <AppText
+                          variant="caption"
+                          weight="semibold"
+                          style={{ color: selected ? colors.inkInverse : colors.ink }}
+                        >
+                          {score}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
           </View>
 
         ) : (
@@ -814,17 +868,18 @@ export function TrainingRunScreen() {
         {isDone ? (
           <Pressable
             onPress={handleDone}
+            disabled={trackCO2 && co2Score === null}
             className="active:opacity-80"
             style={{
               flex: 1,
-              backgroundColor: colors.accent,
+              backgroundColor: trackCO2 && co2Score === null ? colors.border : colors.accent,
               borderRadius: 16,
               paddingVertical: 18,
               alignItems: 'center',
             }}
           >
             <AppText weight="bold" style={{ color: colors.inkInverse, fontSize: 16 }}>
-              {t('done', { ns: 'common' })}
+              {trackCO2 ? t('train_co2_rating_save') : t('done', { ns: 'common' })}
             </AppText>
           </Pressable>
 

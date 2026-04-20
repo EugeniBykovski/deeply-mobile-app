@@ -97,6 +97,7 @@ export function SignInScreen() {
             onPress={handleSignIn}
             isLoading={isLoading}
             error={error}
+            variant="sign_up"
           />
 
           <View

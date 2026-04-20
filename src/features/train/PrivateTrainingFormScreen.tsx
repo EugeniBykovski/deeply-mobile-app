@@ -178,7 +178,6 @@ export function PrivateTrainingFormScreen() {
   const [restSec, setRestSec] = useState(8);
   const [saveResults, setSaveResults] = useState(true);
   const [saveCO2, setSaveCO2] = useState(false);
-  const [onlyClock, setOnlyClock] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleCreate() {
@@ -198,7 +197,6 @@ export function PrivateTrainingFormScreen() {
         repeats,
         saveResults,
         saveCO2,
-        onlyClock,
         steps,
       });
 
@@ -213,6 +211,8 @@ export function PrivateTrainingFormScreen() {
           name: trimmedName,
           steps: JSON.stringify(steps),
           estimatedMinutes: '0',
+          repeats: String(repeats),
+          saveCO2: saveCO2 ? '1' : '0',
         },
       } as any);
     } catch (err: unknown) {
@@ -373,13 +373,7 @@ export function PrivateTrainingFormScreen() {
               value={saveResults}
               onChange={setSaveResults}
             />
-            <ToggleRow label={t('train_save_co2')} value={saveCO2} onChange={setSaveCO2} />
-            <ToggleRow
-              label={t('train_only_clock')}
-              value={onlyClock}
-              onChange={setOnlyClock}
-              last
-            />
+            <ToggleRow label={t('train_save_co2')} value={saveCO2} onChange={setSaveCO2} last />
           </View>
 
           {/* Preview */}
