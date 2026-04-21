@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,29 +31,11 @@ export function IntroScreen() {
       <View className="flex-1 px-6">
         {/* Logo mark */}
         <View className="items-center pt-12 pb-10">
-          <View
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: 36,
-              borderWidth: 1.5,
-              borderColor: colors.accent,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(59,191,173,0.08)',
-            }}
-          >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(59,191,173,0.15)',
-                borderWidth: 1,
-                borderColor: colors.accent,
-              }}
-            />
-          </View>
+          <Image
+            source={require('../../../../assets/logo.png')}
+            style={{ width: 80, height: 80, borderRadius: 20 }}
+            resizeMode="contain"
+          />
           <AppText
             variant="display"
             weight="bold"
