@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
   withTiming,
   type SharedValue,
@@ -33,26 +34,40 @@ export function SnakeVisualization({
 }: SnakeVisualizationProps) {
   const phaseColor = PHASE_COLORS[steps[stepIndex]?.phase ?? 'REST'] ?? colors.accent;
 
+  // Mirror timeLeft into a ref so the animation effect can read it
+  // without having it as a dependency (which would restart animation every second).
+  const timeLeftRef = useRef(timeLeft);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+
+  // Trigger a single smooth animation per step (or per resume).
+  // Using [stepIndex, runState] as deps means we start one continuous
+  // withTiming per step instead of restarting every second.
   useEffect(() => {
-    if (runState !== 'running' || !steps[stepIndex]) return;
+    if (runState === 'paused' || runState === 'idle') {
+      cancelAnimation(ballX);
+      cancelAnimation(ballY);
+      return;
+    }
+    if (runState === 'done' || !steps[stepIndex]) return;
 
-    const total = steps[stepIndex].durationSeconds;
-    const elapsed = total - timeLeft;
-    const progress = total > 0 ? elapsed / total : 0;
-
+    const remaining = timeLeftRef.current;
     const from = waypoints[stepIndex]     ?? { x: 0, y: 0 };
     const to   = waypoints[stepIndex + 1] ?? from;
 
-    ballX.value = withTiming(from.x + (to.x - from.x) * progress, {
-      duration: 950,
-      easing: Easing.linear,
-    });
-    ballY.value = withTiming(from.y + (to.y - from.y) * progress, {
-      duration: 950,
-      easing: Easing.linear,
-    });
+    // Snap ball to its correct current position (no animation) so we don't
+    // animate from the wrong starting point after a step change or resume.
+    const total   = steps[stepIndex].durationSeconds;
+    const elapsed = total > 0 ? total - remaining : 0;
+    const progress = total > 0 ? elapsed / total : 0;
+    ballX.value = from.x + (to.x - from.x) * progress;
+    ballY.value = from.y + (to.y - from.y) * progress;
+
+    // One smooth withTiming for the remaining duration.
+    const duration = Math.max(remaining * 1000, 16);
+    ballX.value = withTiming(to.x, { duration, easing: Easing.linear });
+    ballY.value = withTiming(to.y, { duration, easing: Easing.linear });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, stepIndex, runState]);
+  }, [stepIndex, runState]);
 
   const ballStyle = useAnimatedStyle(() => ({
     transform: [

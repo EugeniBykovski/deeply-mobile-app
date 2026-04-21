@@ -4,6 +4,7 @@ import { TOKEN_KEYS } from '@/api/client';
 import { authEvents } from '@/api/authEvents';
 import type { User } from '@/api/types';
 import { usePurchaseStore } from './purchaseStore';
+import { useOnboardingStore } from './onboardingStore';
 
 interface AuthState {
   user: User | null;
@@ -35,6 +36,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.setItemAsync(TOKEN_KEYS.access, accessToken);
     await SecureStore.setItemAsync(TOKEN_KEYS.refresh, refreshToken);
     set({ user, accessToken, isAuthenticated: true });
+    // Mark that this device has had a successful sign-in so we never route
+    // through onboarding again after logout or a fresh install.
+    useOnboardingStore.getState().markSignedIn();
     // Associate RevenueCat with the authenticated user ID
     usePurchaseStore.getState().identify(user.id).catch(() => {});
   },
@@ -78,6 +82,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { userService } = await import('@/api/services/user.service');
             const user = await userService.getMe();
             set({ user });
+            // Identify in RevenueCat now that we have the real user ID.
+            // configurePurchases() is called with no userId on cold launch
+            // (user not yet loaded), so we call identify() here once the
+            // profile arrives to ensure Pro entitlements are correctly loaded.
+            usePurchaseStore.getState().identify(user.id).catch(() => {});
           } catch {
             // The interceptor already cleared SecureStore and emitted the
             // unauthorized event if the refresh failed.

@@ -78,4 +78,8 @@ export const trainService = {
   ): Promise<void> => {
     await apiClient.patch(endpoints.train.run(runId), payload);
   },
+
+  deleteRun: async (runId: string): Promise<void> => {
+    await apiClient.delete(endpoints.train.run(runId));
+  },
 };

@@ -9,46 +9,87 @@ import { colors } from '@/theme';
 
 interface RecentRunRowProps {
   item: RecentRunItem;
+  /** Multi-select mode — shows checkbox instead of expand chevron */
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  onDelete?: (item: RecentRunItem) => void;
 }
 
-export function RecentRunRow({ item }: RecentRunRowProps) {
+export function RecentRunRow({
+  item,
+  selectionMode,
+  selected,
+  onToggleSelect,
+  onDelete,
+}: RecentRunRowProps) {
   const [expanded, setExpanded] = useState(false);
 
   const statusColor = item.completed ? '#3BBFAD' : '#D4915A';
   const iconName    = item.completed ? 'checkmark-circle-fill' : 'clock-fill';
   const typeIcon    = item.type === 'dive' ? 'water-drop-1' : 'stopwatch';
   const duration    = formatSeconds(item.totalSeconds);
-  const resumable   = canContinue(item);
+  const resumable   = !selectionMode && canContinue(item);
 
   const date          = new Date(item.startedAt);
   const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const formattedTime = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
+  const handlePress = () => {
+    if (selectionMode) {
+      onToggleSelect?.(item.id);
+    } else {
+      setExpanded((v) => !v);
+    }
+  };
+
   return (
-    <Pressable onPress={() => setExpanded((v) => !v)} className="active:opacity-85">
+    <Pressable onPress={handlePress} className="active:opacity-85">
       <View
         style={{
-          backgroundColor: colors.surface,
+          backgroundColor: selected ? `${colors.accent}15` : colors.surface,
           borderWidth: 1,
-          borderColor: item.completed ? `${statusColor}30` : colors.border,
+          borderColor: selected
+            ? `${colors.accent}50`
+            : item.completed
+              ? `${statusColor}30`
+              : colors.border,
           borderRadius: 14,
           padding: 14,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 11,
-              backgroundColor: `${statusColor}15`,
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <LiIcon name={typeIcon} size={17} color={statusColor} />
-          </View>
+          {selectionMode ? (
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                borderWidth: 1.5,
+                borderColor: selected ? colors.accent : colors.border,
+                backgroundColor: selected ? colors.accent : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {selected && <LiIcon name="checkmark" size={12} color="#fff" />}
+            </View>
+          ) : (
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 11,
+                backgroundColor: `${statusColor}15`,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <LiIcon name={typeIcon} size={17} color={statusColor} />
+            </View>
+          )}
 
           <View style={{ flex: 1 }}>
             <AppText weight="medium" numberOfLines={1}>
@@ -61,12 +102,14 @@ export function RecentRunRow({ item }: RecentRunRowProps) {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <LiIcon name={iconName} size={18} color={statusColor} />
-            <LiIcon name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.inkMuted} />
+            {!selectionMode && <LiIcon name={iconName} size={18} color={statusColor} />}
+            {!selectionMode && (
+              <LiIcon name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.inkMuted} />
+            )}
           </View>
         </View>
 
-        {expanded && (
+        {!selectionMode && expanded && (
           <View
             style={{
               marginTop: 12,
@@ -100,40 +143,64 @@ export function RecentRunRow({ item }: RecentRunRowProps) {
             )}
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <AppText variant="caption" muted>Type</AppText>
-              <AppText variant="caption" style={{ textTransform: 'capitalize' }}>{item.type}</AppText>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <AppText variant="caption" muted>Status</AppText>
               <AppText variant="caption" style={{ color: statusColor }}>
                 {item.completed ? 'Completed' : 'Incomplete'}
               </AppText>
             </View>
 
-            {resumable && (
-              <Pressable
-                onPress={(e) => { e.stopPropagation(); continueItem(item); }}
-                className="active:opacity-75"
-                style={{
-                  marginTop: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  backgroundColor: `${colors.accent}18`,
-                  borderWidth: 1,
-                  borderColor: `${colors.accent}40`,
-                  borderRadius: 10,
-                  paddingVertical: 10,
-                }}
-              >
-                <LiIcon name="play" size={13} color={colors.accent} />
-                <AppText variant="caption" weight="semibold" style={{ color: colors.accent }}>
-                  Continue
-                </AppText>
-              </Pressable>
-            )}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              {resumable && (
+                <Pressable
+                  onPress={(e) => { e.stopPropagation(); continueItem(item); }}
+                  className="active:opacity-75"
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    backgroundColor: `${colors.accent}18`,
+                    borderWidth: 1,
+                    borderColor: `${colors.accent}40`,
+                    borderRadius: 10,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <LiIcon name="play" size={13} color={colors.accent} />
+                  <AppText variant="caption" weight="semibold" style={{ color: colors.accent }}>
+                    Continue
+                  </AppText>
+                </Pressable>
+              )}
+
+              {onDelete && (
+                <Pressable
+                  onPress={(e) => { e.stopPropagation(); onDelete(item); }}
+                  className="active:opacity-75"
+                  style={{
+                    flex: resumable ? undefined : 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    backgroundColor: 'rgba(212,90,90,0.10)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(212,90,90,0.3)',
+                    borderRadius: 10,
+                    paddingVertical: 10,
+                    paddingHorizontal: resumable ? 16 : undefined,
+                  }}
+                >
+                  <LiIcon name="trash" size={13} color="#D45A5A" />
+                  {!resumable && (
+                    <AppText variant="caption" weight="semibold" style={{ color: '#D45A5A' }}>
+                      Delete
+                    </AppText>
+                  )}
+                </Pressable>
+              )}
+            </View>
           </View>
         )}
       </View>

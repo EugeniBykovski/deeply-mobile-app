@@ -14,10 +14,13 @@ export interface DiveSessionRun {
 interface DiveSessionState {
   runs: DiveSessionRun[];
   addRun: (run: DiveSessionRun) => void;
+  removeRun: (id: string) => void;
 }
 
 export const useDiveSessionStore = create<DiveSessionState>((set) => ({
   runs: [],
   addRun: (run) =>
     set((s) => ({ runs: [run, ...s.runs].slice(0, 50) })),
+  removeRun: (id) =>
+    set((s) => ({ runs: s.runs.filter((r) => r.id !== id) })),
 }));

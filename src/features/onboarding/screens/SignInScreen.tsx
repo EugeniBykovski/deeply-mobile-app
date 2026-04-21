@@ -1,5 +1,6 @@
-import React from 'react';
-import { View } from 'react-native';
+"use client";
+import React, { useState } from 'react';
+import { Linking, Modal, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,27 +10,36 @@ import { AppText } from '@/shared/components/AppText';
 import { AppleAuthButton } from '@/features/auth/AppleAuthButton';
 import { useAppleAuth } from '@/features/auth/useAppleAuth';
 import { useOnboardingStore } from '@/store/onboardingStore';
+import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
+
+const TERMS_URL = 'https://deeply.app/legal/terms';
+const PRIVACY_URL = 'https://deeply.app/legal/privacy';
 
 export function SignInScreen() {
   const { t } = useTranslation('onboarding');
-  const { complete, markSignedIn } = useOnboardingStore();
+  const { complete } = useOnboardingStore();
   const { signIn, isLoading, error } = useAppleAuth();
+  const [consentVisible, setConsentVisible] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleSignInPress = () => {
+    setConsentVisible(true);
+  };
+
+  const handleConsentAccept = async () => {
+    setConsentVisible(false);
     await signIn();
-    // Record that this device has had a successful Apple sign-in.
-    // This prevents re-showing the onboarding questionnaire on future sign-outs.
-    markSignedIn();
+    // Only proceed if auth actually succeeded
+    if (!useAuthStore.getState().isAuthenticated) return;
     complete();
     router.replace('/(app)/train');
   };
 
+  const handleConsentDecline = () => {
+    setConsentVisible(false);
+  };
+
   const handleSkip = () => {
-    // User skips sign-in — they stay in unauthenticated browse mode.
-    // We do NOT call markSignedIn() here because they haven't actually
-    // authenticated. If they sign out later from an authenticated session
-    // (after eventually signing in), hasEverSignedIn will already be true.
     complete();
     router.replace('/(app)/train');
   };
@@ -94,30 +104,122 @@ export function SignInScreen() {
         {/* Bottom — CTA */}
         <View className="gap-4">
           <AppleAuthButton
-            onPress={handleSignIn}
+            onPress={handleSignInPress}
             isLoading={isLoading}
             error={error}
             variant="sign_up"
           />
 
-          <View
-            onTouchEnd={handleSkip}
-            className="items-center py-3 active:opacity-60"
-          >
+          <Pressable onPress={handleSkip} className="items-center py-3 active:opacity-60">
             <AppText muted variant="caption">
               {t('skip', { ns: 'common' })} for now
             </AppText>
-          </View>
+          </Pressable>
 
-          <AppText
-            variant="caption"
-            muted
-            className="text-center leading-relaxed"
-          >
-            {t('signin_terms')}
-          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
+            <AppText variant="caption" muted>{t('consent_agree')}</AppText>
+            <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
+              <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
+                {t('consent_terms')}
+              </AppText>
+            </Pressable>
+            <AppText variant="caption" muted>{t('consent_and')}</AppText>
+            <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
+              <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
+                {t('consent_privacy')}
+              </AppText>
+            </Pressable>
+          </View>
         </View>
       </View>
+
+      {/* iOS-style consent modal */}
+      <Modal
+        visible={consentVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleConsentDecline}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            backgroundColor: 'rgba(0,0,0,0.55)',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#112224',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: 24,
+              paddingTop: 28,
+              paddingBottom: 40,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.08)',
+              gap: 16,
+            }}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                alignSelf: 'center',
+                marginBottom: 4,
+              }}
+            />
+
+            <AppText variant="heading" weight="bold" style={{ textAlign: 'center' }}>
+              {t('consent_title')}
+            </AppText>
+
+            <AppText secondary style={{ textAlign: 'center', lineHeight: 22 }}>
+              {t('consent_body')}
+            </AppText>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
+              <AppText variant="caption" muted>{t('consent_agree')}</AppText>
+              <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
+                <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
+                  {t('consent_terms')}
+                </AppText>
+              </Pressable>
+              <AppText variant="caption" muted>{t('consent_and')}</AppText>
+              <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
+                <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
+                  {t('consent_privacy')}
+                </AppText>
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={handleConsentAccept}
+              style={{
+                backgroundColor: colors.accent,
+                borderRadius: 16,
+                paddingVertical: 16,
+                alignItems: 'center',
+                marginTop: 4,
+              }}
+              className="active:opacity-80"
+            >
+              <AppText weight="bold" style={{ color: '#fff', fontSize: 16 }}>
+                {t('consent_cta')}
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              onPress={handleConsentDecline}
+              style={{ alignItems: 'center', paddingVertical: 10 }}
+              className="active:opacity-60"
+            >
+              <AppText muted variant="caption">{t('consent_decline')}</AppText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

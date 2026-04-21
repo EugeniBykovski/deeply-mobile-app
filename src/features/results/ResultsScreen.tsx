@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { ScrollView, View, RefreshControl } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Alert, Pressable, ScrollView, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,8 @@ import { PageTopBar } from '@/shared/components/PageTopBar';
 import { useAuthStore } from '@/store/authStore';
 import { useTrainingSessionStore } from '@/store/trainingSessionStore';
 import { useDiveSessionStore } from '@/store/diveSessionStore';
+import { trainService } from '@/api/services/train.service';
+import { diveService } from '@/api/services/dive.service';
 import { useResultsSummary, useRecentRuns } from './hooks/useResultsQueries';
 import { StatCard } from './components/StatCard';
 import { RecentRunRow } from './components/RecentRunRow';
@@ -36,8 +38,11 @@ export function ResultsScreen() {
   const { t } = useTranslation('tabs');
   const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
-  const { runs: localRuns } = useTrainingSessionStore();
-  const { runs: localDiveRuns } = useDiveSessionStore();
+  const { runs: localRuns, removeRun: removeLocalRun } = useTrainingSessionStore();
+  const { runs: localDiveRuns, removeRun: removeLocalDiveRun } = useDiveSessionStore();
+
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const summaryQuery = useResultsSummary();
   const recentQuery  = useRecentRuns();
@@ -53,6 +58,19 @@ export function ResultsScreen() {
     summaryQuery.refetch();
     recentQuery.refetch();
   }, [summaryQuery, recentQuery]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
 
   const summary: ResultsSummary | undefined = summaryQuery.data as ResultsSummary | undefined;
   const backendRuns: RecentRunItem[] = recentQuery.data ?? [];
@@ -83,24 +101,17 @@ export function ResultsScreen() {
 
   const localTrainingIds      = new Set(localRuns.map((r) => r.trainingId));
   const localDiveTemplateIds  = new Set(localDiveRuns.map((r) => r.templateId));
+  // De-duplicate backend runs against local ones using stable IDs only.
+  // Title-based matching was removed — localized titles differ across languages
+  // and caused the same run to appear twice when the app language changed.
   const filteredBackend = backendRuns.filter((br) => {
     if (br.type === 'training') {
       if (!localTrainingIds.size) return true;
-      return !localRuns.find(
-        (lr) =>
-          lr.trainingId === br.id ||
-          (br.title === lr.trainingName &&
-            Math.abs(new Date(br.startedAt).getTime() - new Date(lr.completedAt).getTime()) < 5 * 60 * 1000),
-      );
+      return !localRuns.find((lr) => lr.trainingId === br.id);
     }
     if (br.type === 'dive') {
       if (!localDiveTemplateIds.size) return true;
-      return !localDiveRuns.find(
-        (lr) =>
-          lr.templateId === br.id ||
-          (br.title === lr.templateTitle &&
-            Math.abs(new Date(br.startedAt).getTime() - new Date(lr.completedAt).getTime()) < 5 * 60 * 1000),
-      );
+      return !localDiveRuns.find((lr) => lr.templateId === br.id);
     }
     return true;
   });
@@ -109,6 +120,38 @@ export function ResultsScreen() {
     (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
   );
   const recentRuns = [...allLocalItems, ...filteredBackend];
+
+  const deleteItem = useCallback(async (item: RecentRunItem) => {
+    if (item.type === 'training') removeLocalRun?.(item.id);
+    if (item.type === 'dive') removeLocalDiveRun?.(item.id);
+    if (!item.id.startsWith('local-') && !item.id.startsWith('dive-local-')) {
+      try {
+        if (item.type === 'training') await trainService.deleteRun(item.id);
+        if (item.type === 'dive') await diveService.deleteRun(item.id);
+      } catch { /* non-fatal */ }
+    }
+    queryClient.invalidateQueries({ queryKey: ['results'] });
+  }, [removeLocalRun, removeLocalDiveRun, queryClient]);
+
+  const deleteSelected = useCallback(async () => {
+    const ids = [...selectedIds];
+    exitSelectionMode();
+    for (const id of ids) {
+      const item = recentRuns.find((r) => r.id === id);
+      if (item) await deleteItem(item);
+    }
+  }, [selectedIds, exitSelectionMode, deleteItem, recentRuns]);
+
+  const confirmDeleteSelected = useCallback(() => {
+    Alert.alert(
+      `Delete ${selectedIds.size} item${selectedIds.size > 1 ? 's' : ''}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: deleteSelected },
+      ],
+    );
+  }, [selectedIds.size, deleteSelected]);
 
   const isLoading    = isAuthenticated && summaryQuery.isLoading;
   const isError      = isAuthenticated && summaryQuery.isError;
@@ -155,14 +198,45 @@ export function ResultsScreen() {
 
           {/* Recent activity */}
           <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
-            <SectionHeader title={t('results_recent')} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, marginTop: 4 }}>
+              <AppText variant="heading" weight="semibold">{t('results_recent')}</AppText>
+              {recentRuns.length > 0 && (
+                selectionMode ? (
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    {selectedIds.size > 0 && (
+                      <Pressable onPress={confirmDeleteSelected} className="active:opacity-70">
+                        <AppText variant="caption" style={{ color: '#D45A5A' }}>
+                          Delete ({selectedIds.size})
+                        </AppText>
+                      </Pressable>
+                    )}
+                    <Pressable onPress={exitSelectionMode} className="active:opacity-70">
+                      <AppText variant="caption" muted>Cancel</AppText>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable onPress={() => setSelectionMode(true)} className="active:opacity-70">
+                    <LiIcon name="edit-1" size={16} color={colors.inkMuted} />
+                  </Pressable>
+                )
+              )}
+            </View>
             {recentRuns.length === 0 ? (
               <View style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 20, alignItems: 'center' }}>
                 <AppText secondary style={{ textAlign: 'center' }}>{t('results_no_recent')}</AppText>
               </View>
             ) : (
               <View style={{ gap: 8 }}>
-                {recentRuns.map((item) => <RecentRunRow key={item.id} item={item} />)}
+                {recentRuns.map((item) => (
+                  <RecentRunRow
+                    key={item.id}
+                    item={item}
+                    selectionMode={selectionMode}
+                    selected={selectedIds.has(item.id)}
+                    onToggleSelect={toggleSelect}
+                    onDelete={!selectionMode ? deleteItem : undefined}
+                  />
+                ))}
               </View>
             )}
           </View>

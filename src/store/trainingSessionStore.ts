@@ -25,6 +25,7 @@ interface TrainingSessionState {
   runs: SessionRun[];
   statusByTrainingId: Record<string, 'completed' | 'in_progress'>;
   addRun: (run: SessionRun) => void;
+  removeRun: (id: string) => void;
   setInProgress: (trainingId: string) => void;
 }
 
@@ -40,6 +41,9 @@ export const useTrainingSessionStore = create<TrainingSessionState>((set) => ({
         [run.trainingId]: run.completed ? 'completed' : 'in_progress',
       },
     })),
+
+  removeRun: (id) =>
+    set((s) => ({ runs: s.runs.filter((r) => r.id !== id) })),
 
   setInProgress: (trainingId) =>
     set((s) => ({

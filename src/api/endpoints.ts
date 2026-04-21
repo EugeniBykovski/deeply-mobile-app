@@ -46,6 +46,7 @@ export const endpoints = {
     templates: '/dive/templates',
     template: (slug: string) => `/dive/templates/${slug}`,
     run: '/dive/run',
+    deleteRun: (id: string) => `/dive/run/${id}`,
   },
 
   // Purchases

@@ -34,4 +34,8 @@ export const diveService = {
     );
     return data;
   },
+
+  deleteRun: async (runId: string): Promise<void> => {
+    await apiClient.delete(endpoints.dive.deleteRun(runId));
+  },
 };

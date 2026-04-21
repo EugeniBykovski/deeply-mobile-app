@@ -37,10 +37,11 @@ export default function RootLayout() {
         // Restore auth session from SecureStore
         await restoreSession();
 
-        // Configure RevenueCat SDK.
-        // Pass userId if already authenticated (from restored session).
-        const userId = useAuthStore.getState().user?.id;
-        configurePurchases(userId);
+        // Configure RevenueCat SDK as anonymous. The user profile fetch in
+        // restoreSession() is fire-and-forget, so user?.id is always undefined
+        // here. identify() is called inside restoreSession once the profile
+        // arrives to correctly associate the SDK with the authenticated user.
+        configurePurchases();
       } catch {
         // Non-fatal — proceed with defaults
       } finally {

@@ -9,6 +9,8 @@ import Animated, {
   Easing,
   cancelAnimation,
   interpolateColor,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -61,8 +63,9 @@ export function DiveSessionScreen() {
   const templateId = params.id ?? "";
   const templateSlug = params.slug ?? "";
   const title = params.title ?? "Dive";
-  const maxDepthMeters = Number(params.maxDepthMeters ?? 30);
-  const targetHoldSeconds = Number(params.targetHoldSeconds ?? 120);
+  const maxDepthMeters = Math.max(Number(params.maxDepthMeters || "30"), 1);
+  // Use || instead of ?? so that "0" falls back to 120 (null/undefined AND falsy zero)
+  const targetHoldSeconds = Math.max(Number(params.targetHoldSeconds || "120"), 10);
 
   // ── Session state ──────────────────────────────────────────────────────────
 
@@ -98,26 +101,53 @@ export function DiveSessionScreen() {
     ],
   }));
 
-  // Poll SharedValue → React state for depth readout + max-depth detection.
+  // Shared values for surfacing detection — lets useAnimatedReaction read
+  // session state without crossing the JS bridge on every frame.
+  const isSurfacingShared = useSharedValue(false);
+  useEffect(() => {
+    isSurfacingShared.value = sessionState === "surfacing";
+  }, [sessionState, isSurfacingShared]);
+
+  // React state updaters called via runOnJS so they can be used from worklets.
+  const updateDepth = useCallback((approx: number) => {
+    setCurrentDepth(approx);
+    setMaxReached((prev) => {
+      const next = Math.max(prev, approx);
+      maxReachedRef.current = next;
+      return next;
+    });
+  }, []);
+  const markMaxDepthReached = useCallback(() => {
+    reachedMaxDepthRef.current = true;
+  }, []);
+  const markSurfaced = useCallback(() => {
+    setSessionState("idle");
+  }, []);
+
+  // Replace JS-thread setInterval polling with native-thread useAnimatedReaction.
+  // This reads depthProgress entirely on the UI thread and only calls runOnJS
+  // when the value actually changes, eliminating bridge overhead.
+  useAnimatedReaction(
+    () => depthProgress.value,
+    (value) => {
+      const approx = Math.round(value * maxDepthMeters);
+      runOnJS(updateDepth)(approx);
+      if (value >= 0.98) {
+        runOnJS(markMaxDepthReached)();
+      }
+      if (isSurfacingShared.value && value <= 0.01) {
+        runOnJS(markSurfaced)();
+      }
+    },
+    [maxDepthMeters, updateDepth, markMaxDepthReached, markSurfaced],
+  );
+
+  // Reset depth display when idle/done.
   useEffect(() => {
     if (sessionState === "idle" || sessionState === "done") {
       setCurrentDepth(0);
-      return;
     }
-    const iv = setInterval(() => {
-      const approx = Math.round(depthProgress.value * maxDepthMeters);
-      setCurrentDepth(approx);
-      setMaxReached((prev) => {
-        const next = Math.max(prev, approx);
-        maxReachedRef.current = next;
-        return next;
-      });
-      if (depthProgress.value >= 0.98) {
-        reachedMaxDepthRef.current = true;
-      }
-    }, 100);
-    return () => clearInterval(iv);
-  }, [sessionState, maxDepthMeters, depthProgress]);
+  }, [sessionState]);
 
   // ── Hold timer ─────────────────────────────────────────────────────────────
 
@@ -170,14 +200,7 @@ export function DiveSessionScreen() {
     startAscent();
   }
 
-  // Return to idle when ascent reaches surface
-  useEffect(() => {
-    if (sessionState !== "surfacing") return;
-    const iv = setInterval(() => {
-      if (depthProgress.value <= 0.01) setSessionState("idle");
-    }, 200);
-    return () => clearInterval(iv);
-  }, [sessionState, depthProgress]);
+  // Surfacing → idle transition is handled by the useAnimatedReaction above.
 
   // ── Finish dive ────────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { ErrorView } from '@/shared/components/ErrorView';
 import { SkeletonArticleCard } from '@/shared/components/Skeleton';
@@ -40,6 +40,9 @@ function useCultureArticles(section?: string) {
     queryFn: () =>
       cultureService.getArticles({ section: section ?? undefined, lang, limit: 20 }),
     select: (data) => data.items,
+    // Keep showing previous section's articles while new ones load so the
+    // filter bar never triggers a full skeleton flash on filter tap.
+    placeholderData: keepPreviousData,
   });
 }
 
