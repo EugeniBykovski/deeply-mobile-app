@@ -1,6 +1,5 @@
-"use client";
 import React, { useState } from 'react';
-import { Linking, Modal, Pressable, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,8 +12,8 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
 
-const TERMS_URL = 'https://deeply.app/legal/terms';
-const PRIVACY_URL = 'https://deeply.app/legal/privacy';
+const openTerms = () => router.push('/legal/terms');
+const openPrivacy = () => router.push('/legal/privacy');
 
 export function SignInScreen() {
   const { t } = useTranslation('onboarding');
@@ -118,13 +117,13 @@ export function SignInScreen() {
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
             <AppText variant="caption" muted>{t('consent_agree')}</AppText>
-            <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
+            <Pressable onPress={openTerms}>
               <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
                 {t('consent_terms')}
               </AppText>
             </Pressable>
             <AppText variant="caption" muted>{t('consent_and')}</AppText>
-            <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
+            <Pressable onPress={openPrivacy}>
               <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
                 {t('consent_privacy')}
               </AppText>
@@ -181,13 +180,13 @@ export function SignInScreen() {
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
               <AppText variant="caption" muted>{t('consent_agree')}</AppText>
-              <Pressable onPress={() => Linking.openURL(TERMS_URL)}>
+              <Pressable onPress={openTerms}>
                 <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
                   {t('consent_terms')}
                 </AppText>
               </Pressable>
               <AppText variant="caption" muted>{t('consent_and')}</AppText>
-              <Pressable onPress={() => Linking.openURL(PRIVACY_URL)}>
+              <Pressable onPress={openPrivacy}>
                 <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
                   {t('consent_privacy')}
                 </AppText>

@@ -15,6 +15,7 @@ interface DiveSessionState {
   runs: DiveSessionRun[];
   addRun: (run: DiveSessionRun) => void;
   removeRun: (id: string) => void;
+  updateRunId: (localId: string, backendId: string) => void;
 }
 
 export const useDiveSessionStore = create<DiveSessionState>((set) => ({
@@ -23,4 +24,8 @@ export const useDiveSessionStore = create<DiveSessionState>((set) => ({
     set((s) => ({ runs: [run, ...s.runs].slice(0, 50) })),
   removeRun: (id) =>
     set((s) => ({ runs: s.runs.filter((r) => r.id !== id) })),
+  updateRunId: (localId, backendId) =>
+    set((s) => ({
+      runs: s.runs.map((r) => r.id === localId ? { ...r, id: backendId } : r),
+    })),
 }));

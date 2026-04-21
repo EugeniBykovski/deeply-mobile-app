@@ -51,6 +51,7 @@ export function DiveSessionScreen() {
   const { t } = useTranslation("tabs");
   const queryClient = useQueryClient();
   const addDiveRun = useDiveSessionStore((s) => s.addRun);
+  const updateDiveRunId = useDiveSessionStore((s) => s.updateRunId);
 
   const params = useLocalSearchParams<{
     id: string;
@@ -216,9 +217,11 @@ export function DiveSessionScreen() {
     setSessionState("done");
     setSaving(true);
 
+    const localId = `dive-local-${Date.now()}`;
+
     // Write to local store immediately so Results tab shows it right away
     addDiveRun({
-      id: `dive-local-${Date.now()}`,
+      id: localId,
       templateId,
       templateSlug,
       templateTitle: title,
@@ -229,18 +232,20 @@ export function DiveSessionScreen() {
     });
 
     try {
-      await diveService.saveRun({
+      const saved = await diveService.saveRun({
         templateId,
         holdSeconds: finalHold,
         completed: trueCompleted,
       });
+      // Sync local ID to the real backend run ID so deletion works
+      updateDiveRunId(localId, saved.id);
       queryClient.invalidateQueries({ queryKey: ["results"] });
     } catch {
       // Non-fatal — guest users hit 401
     } finally {
       setSaving(false);
     }
-  }, [templateId, title, depthProgress, queryClient, addDiveRun]);
+  }, [templateId, title, depthProgress, queryClient, addDiveRun, updateDiveRunId]);
 
   // Cleanup
   useEffect(() => {

@@ -203,6 +203,8 @@ export interface RecentRunItem {
   totalSeconds: number | null;
   /** Dive runs only */
   maxDepthMeters?: number | null;
+  /** Template ID — used to deduplicate against local session store runs */
+  templateId?: string | null;
   /** Slug of the template — used to navigate to detail/resume screen */
   templateSlug?: string | null;
   /** Program slug — PRESET training runs only */

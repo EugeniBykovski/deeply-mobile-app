@@ -39,6 +39,8 @@ export const endpoints = {
     training: (slug: string) => `/results/training/${slug}`,
     program: (slug: string) => `/results/program/${slug}`,
     private: (id: string) => `/results/private/${id}`,
+    deleteRun: (type: 'training' | 'dive', id: string) => `/results/runs/${type}/${id}`,
+    deleteAllRuns: '/results/runs/all',
   },
 
   // Dive

@@ -50,4 +50,18 @@ export const resultsService = {
     });
     return data;
   },
+
+  deleteRun: async (type: 'training' | 'dive', id: string): Promise<void> => {
+    const url = endpoints.results.deleteRun(type, id);
+    console.log('[resultsService.deleteRun] DELETE', url);
+    const res = await apiClient.delete(url).catch((err) => {
+      console.error('[resultsService.deleteRun] status=%s data=%o', err?.response?.status, err?.response?.data);
+      throw err;
+    });
+    return res.data;
+  },
+
+  deleteAllRuns: async (): Promise<void> => {
+    await apiClient.delete(endpoints.results.deleteAllRuns);
+  },
 };

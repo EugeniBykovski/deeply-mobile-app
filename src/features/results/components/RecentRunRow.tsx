@@ -62,18 +62,18 @@ export function RecentRunRow({
           {selectionMode ? (
             <View
               style={{
-                width: 22,
-                height: 22,
-                borderRadius: 11,
-                borderWidth: 1.5,
-                borderColor: selected ? colors.accent : colors.border,
-                backgroundColor: selected ? colors.accent : 'transparent',
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                backgroundColor: selected ? 'rgba(212,90,90,0.18)' : 'rgba(212,90,90,0.08)',
+                borderWidth: 1,
+                borderColor: selected ? 'rgba(212,90,90,0.6)' : 'rgba(212,90,90,0.2)',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              {selected && <LiIcon name="checkmark" size={12} color="#fff" />}
+              <LiIcon name="trash" size={15} color={selected ? '#D45A5A' : 'rgba(212,90,90,0.5)'} />
             </View>
           ) : (
             <View

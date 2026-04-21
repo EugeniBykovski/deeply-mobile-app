@@ -54,6 +54,8 @@ const SYMBOL_MAP: Record<string, string> = {
   gear: "gearshape.fill",
   logout: "rectangle.portrait.and.arrow.right",
   trash: "trash.fill",
+  "pen-to-square": "square.and.pencil",
+  "edit-1": "square.and.pencil",
   globe: "globe",
   checkmark: "checkmark",
 
@@ -73,7 +75,7 @@ const SYMBOL_MAP: Record<string, string> = {
 
   // Legal / document
   "file-text": "doc.text.fill",
-  "shield": "shield.fill",
+  shield: "shield.fill",
 } as const;
 
 // ─── Emoji fallbacks for names without a direct SF Symbol ─────────────────────

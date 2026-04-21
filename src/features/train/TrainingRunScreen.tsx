@@ -60,7 +60,7 @@ export function TrainingRunScreen() {
   const trackCO2     = params.saveCO2 === '1';
 
   const { visualizationMode, setVisualizationMode } = useTrainingPrefsStore();
-  const { addRun, setInProgress } = useTrainingSessionStore();
+  const { addRun, setInProgress, updateRunId } = useTrainingSessionStore();
 
   const [runState,   setRunState]   = useState<RunState>('idle');
   const [stepIndex,  setStepIndex]  = useState(0);
@@ -152,9 +152,10 @@ export function TrainingRunScreen() {
       if (isSavingRef.current) return;
       isSavingRef.current = true;
 
+      const localId = `local-${Date.now()}`;
       if (trainingId) {
         addRun({
-          id: `local-${Date.now()}`,
+          id: localId,
           trainingId,
           trainingName,
           trainingSlug,
@@ -172,8 +173,11 @@ export function TrainingRunScreen() {
             totalSeconds: elapsedRef.current > 0 ? elapsedRef.current : undefined,
             ...(metrics ? { metrics } : {}),
           });
+          // Sync local ID to the real backend run ID so deletion works
+          if (trainingId) updateRunId(localId, runIdRef.current);
         } else if (trainingId) {
-          await trainService.saveRun({ templateId: trainingId, completed, totalSeconds: elapsedRef.current });
+          const saved = await trainService.saveRun({ templateId: trainingId, completed, totalSeconds: elapsedRef.current });
+          updateRunId(localId, saved.id);
         }
       } catch {
         // Non-fatal — guest users will hit 401 here.
@@ -182,7 +186,7 @@ export function TrainingRunScreen() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [trainingId, trainingName, queryClient, addRun],
+    [trainingId, trainingName, queryClient, addRun, updateRunId],
   );
 
   // ─── Step advance ──────────────────────────────────────────────────────────────
