@@ -108,18 +108,32 @@ export function TrainingRunScreen() {
   }));
 
   // ─── Timer mode animation ─────────────────────────────────────────────────────
+  // Mirror timeLeft into a ref so the animation effect can read the current
+  // remaining time without having it as a dependency (which would restart
+  // withTiming every second, causing 1-second choppiness in production).
+  const timerTimeLeftRef = useRef(timeLeft);
+  useEffect(() => { timerTimeLeftRef.current = timeLeft; }, [timeLeft]);
 
   useEffect(() => {
+    if (runState === 'paused' || runState === 'idle') {
+      cancelAnimation(breathScale);
+      return;
+    }
     if (runState !== 'running' || !currentStep || visualizationMode !== 'timer') return;
 
-    const total    = currentStep.durationSeconds;
-    const elapsedT = total - timeLeft;
-    const progress = total > 0 ? elapsedT / total : 0;
-    const from     = PHASE_SCALE_FROM[currentStep.phase] ?? 0.55;
-    const to       = PHASE_SCALE_TO[currentStep.phase]   ?? 0.55;
+    const total     = currentStep.durationSeconds;
+    const remaining = timerTimeLeftRef.current;
+    const elapsed   = total - remaining;
+    const progress  = total > 0 ? elapsed / total : 0;
+    const from      = PHASE_SCALE_FROM[currentStep.phase] ?? 0.55;
+    const to        = PHASE_SCALE_TO[currentStep.phase]   ?? 0.55;
 
-    breathScale.value = withTiming(from + (to - from) * progress, {
-      duration: 950,
+    // Snap to the correct mid-step position, then animate to the final target
+    // over the FULL remaining duration — one smooth animation per step instead
+    // of restarting every second.
+    breathScale.value = from + (to - from) * progress;
+    breathScale.value = withTiming(to, {
+      duration: Math.max(remaining * 1000, 16),
       easing: Easing.inOut(Easing.quad),
     });
     circleOpacity.value = withTiming(
@@ -127,7 +141,7 @@ export function TrainingRunScreen() {
       { duration: 400 },
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, stepIndex, runState, visualizationMode]);
+  }, [stepIndex, runState, visualizationMode]);
 
   // ─── Interval control ─────────────────────────────────────────────────────────
 
