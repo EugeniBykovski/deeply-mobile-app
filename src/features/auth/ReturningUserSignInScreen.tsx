@@ -17,19 +17,35 @@ import { colors } from '@/theme';
  * Apple on this device but is currently signed out (e.g. after explicit logout
  * or token expiry with no valid refresh token).
  *
- * Does NOT show the onboarding questionnaire — the user has already done that.
- * The single goal here is fast, frictionless re-authentication.
+ * Also shown on a fresh install when FileSystem state is gone but the user
+ * taps "Already have an account?" from the onboarding intro.
+ *
+ * Routing after sign-in:
+ *   isNewUser: false → existing account → main app (no onboarding)
+ *   isNewUser: true  → brand-new account reached here accidentally →
+ *                      onboarding questionnaire
  */
 export function ReturningUserSignInScreen() {
   const { t } = useTranslation('auth');
-  const { markSignedIn } = useOnboardingStore();
-  const { signIn, isLoading, error } = useAppleAuth();
+  const { complete } = useOnboardingStore();
+  const { signIn, isLoading, isNewUser, error } = useAppleAuth();
 
   const handleSignIn = async () => {
     await signIn();
+
     if (!useAuthStore.getState().isAuthenticated) return;
-    markSignedIn();
-    router.replace('/(app)/train');
+
+    if (isNewUser) {
+      // This Apple account had no Deeply profile — treat as new user and
+      // send them through the onboarding questionnaire.
+      router.replace('/(onboarding)');
+    } else {
+      // Existing account. Ensure isCompleted is set so that on a fresh
+      // install (where FileSystem state was wiped) we don't route through
+      // onboarding again after the next logout/cold-start cycle.
+      complete();
+      router.replace('/(app)/train');
+    }
   };
 
   return (

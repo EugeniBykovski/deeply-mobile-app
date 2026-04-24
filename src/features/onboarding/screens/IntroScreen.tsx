@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -91,7 +91,7 @@ export function IntroScreen() {
         </View>
 
         {/* CTA */}
-        <View className="pb-6 pt-6">
+        <View className="pb-6 pt-6 gap-3">
           <AppButton
             label={t('continue', { ns: 'common' })}
             variant="primary"
@@ -99,6 +99,19 @@ export function IntroScreen() {
             className="w-full"
             onPress={() => router.push('/(onboarding)/goals')}
           />
+
+          {/* Returning users on fresh install can skip the questionnaire */}
+          <Pressable
+            onPress={() => router.push('/signin' as any)}
+            className="items-center py-2 active:opacity-60"
+          >
+            <AppText variant="caption" muted>
+              {t('already_have_account')}{' '}
+              <AppText variant="caption" style={{ color: colors.accent }}>
+                {t('sign_in', { ns: 'auth' })}
+              </AppText>
+            </AppText>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

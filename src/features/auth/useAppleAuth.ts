@@ -8,6 +8,8 @@ import { useAuthStore } from '@/store/authStore';
 interface UseAppleAuthReturn {
   signIn: () => Promise<void>;
   isLoading: boolean;
+  /** null until sign-in completes; true = brand-new account; false = existing account */
+  isNewUser: boolean | null;
   error: string | null;
   isAvailable: boolean;
 }
@@ -15,9 +17,9 @@ interface UseAppleAuthReturn {
 export function useAppleAuth(): UseAppleAuthReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const { setAuth } = useAuthStore();
 
-  // Apple Sign-In is only available on iOS 13+
   const isAvailable = Platform.OS === 'ios';
 
   const signIn = useCallback(async () => {
@@ -28,9 +30,9 @@ export function useAppleAuth(): UseAppleAuthReturn {
 
     setIsLoading(true);
     setError(null);
+    setIsNewUser(null);
 
     try {
-      // Request Apple credentials
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -44,14 +46,14 @@ export function useAppleAuth(): UseAppleAuthReturn {
       }
 
       // Exchange Apple identity token with backend → POST /auth/apple
+      // Backend returns isNewUser: true if this Apple sub didn't exist before.
       const authResponse = await authService.loginWithApple({
         token: identityToken,
       });
 
-      // Fetch the user profile after login
-      // We set tokens first so the auth interceptor can attach them
+      setIsNewUser(authResponse.isNewUser);
+
       await setAuth(
-        // Temporarily use a minimal user object — overwritten after getMe()
         { id: '', email: credential.email ?? null, appleSub: credential.user },
         authResponse.accessToken,
         authResponse.refreshToken,
@@ -64,7 +66,6 @@ export function useAppleAuth(): UseAppleAuthReturn {
       const appleError = err as { code?: string; message?: string };
 
       if (appleError.code === 'ERR_REQUEST_CANCELED') {
-        // User dismissed the Apple dialog — not an error
         setError(null);
       } else {
         setError(appleError.message ?? 'Apple Sign-In failed. Please try again.');
@@ -74,5 +75,5 @@ export function useAppleAuth(): UseAppleAuthReturn {
     }
   }, [isAvailable, setAuth]);
 
-  return { signIn, isLoading, error, isAvailable };
+  return { signIn, isLoading, isNewUser, error, isAvailable };
 }

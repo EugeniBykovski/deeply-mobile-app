@@ -3,43 +3,57 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 import { useAuthStore } from '@/store/authStore';
 
 /**
- * Entry gate — runs after the root layout has bootstrapped auth + onboarding state.
+ * Entry gate — runs after the root layout has bootstrapped auth + onboarding.
  *
- * Three possible states:
+ * State machine:
  *
- * 1. Authenticated — tokens present and valid → main app
- * 2. Returning unauthenticated — previously signed in but currently signed out
- *    → direct Apple sign-in screen (skip the questionnaire entirely)
- * 3. First-time user — no account history on this device
- *    → full onboarding questionnaire flow
+ *   A. Authenticated                        → main app (tokens valid)
+ *   B. Known returning user, signed out     → Sign In screen (skip questionnaire)
+ *   C. Brand-new user / fresh install       → onboarding questionnaire
+ *   D. Completed onboarding, skipped auth   → main app (anonymous browse mode)
  *
- * The edge case of "completed onboarding but always skipped sign-in" falls
- * through to the main app in unauthenticated mode (Results shows an empty
- * state; all other tabs work without auth).
+ * IMPORTANT: We must not make any routing decision until:
+ *   1. The onboarding store has hydrated from FileSystem (_hasHydrated)
+ *   2. The auth store has finished reading SecureStore (!isLoading)
+ *
+ * Without these guards, both stores default to false/null and cold-launch
+ * routes every user — including authenticated returning users — into
+ * onboarding. The component returns null while the splash screen is still
+ * visible (controlled by RootLayout), so no flash occurs.
  */
 export default function Index() {
+  const _hasHydrated = useOnboardingStore((s) => s._hasHydrated);
   const isCompleted = useOnboardingStore((s) => s.isCompleted);
   const hasEverSignedIn = useOnboardingStore((s) => s.hasEverSignedIn);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // ── 1. Active session ──────────────────────────────────────────────────────
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authIsLoading = useAuthStore((s) => s.isLoading);
+
+  // ── Wait for both stores to settle before making any routing decision. ────
+  // The splash screen covers the UI during this window so the user sees
+  // nothing. Routing before stores are ready causes double-navigation and
+  // sends existing users through onboarding on every cold start.
+  if (!_hasHydrated || authIsLoading) {
+    return null;
+  }
+
+  // ── A. Active session ─────────────────────────────────────────────────────
   if (isAuthenticated) {
     return <Redirect href="/(app)/train" />;
   }
 
-  // ── 2. Returning user — has signed in before but is now signed out ─────────
-  // Do NOT force them through the onboarding questionnaire again.
+  // ── B. Returning user — has signed in before but is now signed out ────────
+  // hasEverSignedIn is a sticky device-level flag that survives sign-out.
+  // It is only cleared by resetFull() (account deletion).
   if (hasEverSignedIn) {
     return <Redirect href={'/signin' as any} />;
   }
 
-  // ── 3. Onboarding not yet complete — first-time user ──────────────────────
+  // ── C. First-time user — onboarding questionnaire not yet complete ─────────
   if (!isCompleted) {
     return <Redirect href="/(onboarding)" />;
   }
 
-  // ── 4. Completed onboarding but always skipped sign-in ────────────────────
-  // Allow unauthenticated browse mode. Results/profile features show
-  // appropriate empty states.
+  // ── D. Completed onboarding, always skipped sign-in (anonymous mode) ──────
   return <Redirect href="/(app)/train" />;
 }

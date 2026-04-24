@@ -30,6 +30,11 @@ export function SignInScreen() {
     await signIn();
     // Only proceed if auth actually succeeded
     if (!useAuthStore.getState().isAuthenticated) return;
+    // The user has reached the end of the onboarding questionnaire and
+    // signed in. Regardless of isNewUser, mark onboarding complete and
+    // enter the app. If isNewUser is false (existing account on fresh
+    // install who went through the questionnaire), complete() ensures
+    // isCompleted is persisted for future cold starts.
     complete();
     router.replace('/(app)/train');
   };

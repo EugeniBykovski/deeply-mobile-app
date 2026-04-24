@@ -8,6 +8,8 @@
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  /** True when this Apple Sign-In just created a brand-new account. */
+  isNewUser: boolean;
 }
 
 export interface AppleLoginPayload {
