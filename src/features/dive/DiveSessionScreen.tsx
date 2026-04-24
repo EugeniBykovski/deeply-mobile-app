@@ -109,6 +109,11 @@ export function DiveSessionScreen() {
     isSurfacingShared.value = sessionState === "surfacing";
   }, [sessionState, isSurfacingShared]);
 
+  // Shared value tracking the last integer depth reported to JS.
+  // Prevents runOnJS(updateDepth) from firing 60 times/second on the UI→JS bridge
+  // when the visible integer depth hasn't actually changed.
+  const lastReportedDepth = useSharedValue(-1);
+
   // React state updaters called via runOnJS so they can be used from worklets.
   const updateDepth = useCallback((approx: number) => {
     setCurrentDepth(approx);
@@ -125,14 +130,18 @@ export function DiveSessionScreen() {
     setSessionState("idle");
   }, []);
 
-  // Replace JS-thread setInterval polling with native-thread useAnimatedReaction.
-  // This reads depthProgress entirely on the UI thread and only calls runOnJS
-  // when the value actually changes, eliminating bridge overhead.
+  // Reads depthProgress on the UI thread and only calls runOnJS when the
+  // integer depth changes. Without the guard, runOnJS crosses the bridge
+  // 60 times/second in production (genuine inter-thread call), stalling the
+  // JS thread and causing the descent animation to lag and appear to jump.
   useAnimatedReaction(
     () => depthProgress.value,
     (value) => {
-      const approx = Math.round(value * maxDepthMeters);
-      runOnJS(updateDepth)(approx);
+      const approxInt = Math.round(value * maxDepthMeters);
+      if (approxInt !== lastReportedDepth.value) {
+        lastReportedDepth.value = approxInt;
+        runOnJS(updateDepth)(approxInt);
+      }
       if (value >= 0.98) {
         runOnJS(markMaxDepthReached)();
       }
@@ -188,6 +197,7 @@ export function DiveSessionScreen() {
   function handlePressIn() {
     if (sessionState === "done") return;
     cancelAnimation(depthProgress);
+    lastReportedDepth.value = -1; // force next frame to report current depth
     setSessionState("holding");
     startHoldTimer();
     startDescent();

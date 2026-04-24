@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, memo } from 'react';
 import { View } from 'react-native';
 import Animated, {
   Easing,
@@ -16,28 +16,26 @@ export const SNAKE_HEIGHT = 200;
 interface SnakeVisualizationProps {
   steps: TrainingStep[];
   stepIndex: number;
-  timeLeft: number;
+  /** Pass a ref (not the value) so this component doesn't re-render every second. */
+  timeLeftRef: React.MutableRefObject<number>;
   runState: 'idle' | 'running' | 'paused' | 'done';
   waypoints: { x: number; y: number }[];
   ballX: SharedValue<number>;
   ballY: SharedValue<number>;
 }
 
-export function SnakeVisualization({
+// memo: only re-renders when steps/stepIndex/runState/waypoints/ballX/ballY
+// change — NOT every second when the parent's timeLeft state ticks.
+export const SnakeVisualization = memo(function SnakeVisualization({
   steps,
   stepIndex,
-  timeLeft,
+  timeLeftRef,
   runState,
   waypoints,
   ballX,
   ballY,
 }: SnakeVisualizationProps) {
   const phaseColor = PHASE_COLORS[steps[stepIndex]?.phase ?? 'REST'] ?? colors.accent;
-
-  // Mirror timeLeft into a ref so the animation effect can read it
-  // without having it as a dependency (which would restart animation every second).
-  const timeLeftRef = useRef(timeLeft);
-  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
 
   // Trigger a single smooth animation per step (or per resume).
   // Using [stepIndex, runState] as deps means we start one continuous

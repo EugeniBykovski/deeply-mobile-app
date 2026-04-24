@@ -51,7 +51,8 @@ export function TrainingRunScreen() {
     saveCO2: string;
   }>();
 
-  const steps: TrainingStep[] = params.steps ? JSON.parse(params.steps) : [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const steps: TrainingStep[] = useMemo(() => params.steps ? JSON.parse(params.steps) : [], [params.steps]);
   const trainingId   = params.id;
   const trainingName = params.name ?? 'Training';
   const trainingSlug = params.slug;
@@ -412,7 +413,7 @@ export function TrainingRunScreen() {
                 <SnakeVisualization
                   steps={steps}
                   stepIndex={stepIndex}
-                  timeLeft={timeLeft}
+                  timeLeftRef={timerTimeLeftRef}
                   runState={runState}
                   waypoints={snakeWaypoints}
                   ballX={ballX}
