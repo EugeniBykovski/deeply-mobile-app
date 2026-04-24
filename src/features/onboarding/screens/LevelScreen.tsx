@@ -28,7 +28,7 @@ export function LevelScreen() {
   const handleContinue = () => {
     if (!selected) return;
     setLevel(selected);
-    router.push('/(onboarding)/signin');
+    router.push('/(onboarding)/auth');
   };
 
   return (

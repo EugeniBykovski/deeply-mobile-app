@@ -12,8 +12,8 @@ import { useOnboardingStore } from '@/store/onboardingStore';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
 
-const openTerms = () => router.push('/legal/terms');
-const openPrivacy = () => router.push('/legal/privacy');
+const openTerms = () => router.push('/legal/terms' as any);
+const openPrivacy = () => router.push('/legal/privacy' as any);
 
 export function SignInScreen() {
   const { t } = useTranslation('onboarding');

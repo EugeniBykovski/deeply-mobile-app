@@ -8,7 +8,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="mode" />
       <Stack.Screen name="notes" />
       <Stack.Screen name="level" />
-      <Stack.Screen name="signin" />
+      <Stack.Screen name="auth" />
     </Stack>
   );
 }
