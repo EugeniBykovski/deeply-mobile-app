@@ -12,7 +12,7 @@ import i18n from '@/i18n';
 
 import { queryClient } from '@/shared/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
-import { useOnboardingStore } from '@/store/onboardingStore';
+import { useOnboardingStore, waitForOnboardingHydration } from '@/store/onboardingStore';
 import { usePurchaseStore } from '@/store/purchaseStore';
 import { SplashView } from '@/shared/components/SplashView';
 import { colors } from '@/theme';
@@ -30,6 +30,11 @@ export default function RootLayout() {
   useEffect(() => {
     async function bootstrap() {
       try {
+        // Wait for onboarding store to hydrate from FileSystem before reading
+        // hasEverSignedIn / isCompleted — without this, both default to false
+        // and cold-launch routes existing users into onboarding.
+        await waitForOnboardingHydration();
+
         // Apply persisted language selection
         if (savedLanguage && i18n.language !== savedLanguage) {
           await i18n.changeLanguage(savedLanguage);

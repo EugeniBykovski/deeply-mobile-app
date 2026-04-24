@@ -109,7 +109,19 @@ export function SignInScreen() {
             variant="sign_up"
           />
 
-          <Pressable onPress={handleSkip} className="items-center py-3 active:opacity-60">
+          <Pressable
+            onPress={() => router.push('/signin' as any)}
+            className="items-center py-2 active:opacity-60"
+          >
+            <AppText variant="caption" muted>
+              {t('already_have_account')}{' '}
+              <AppText variant="caption" style={{ color: colors.accent }}>
+                {t('sign_in', { ns: 'auth' })}
+              </AppText>
+            </AppText>
+          </Pressable>
+
+          <Pressable onPress={handleSkip} className="items-center py-2 active:opacity-60">
             <AppText muted variant="caption">
               {t('skip', { ns: 'common' })} for now
             </AppText>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Pressable, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppText } from '@/shared/components/AppText';
 import { AppleAuthButton } from './AppleAuthButton';
 import { useAppleAuth } from './useAppleAuth';
+import { useAuthStore } from '@/store/authStore';
 import { useOnboardingStore } from '@/store/onboardingStore';
 import { colors } from '@/theme';
 
@@ -26,7 +27,7 @@ export function ReturningUserSignInScreen() {
 
   const handleSignIn = async () => {
     await signIn();
-    // Mark device-level sign-in history (already true, but idempotent call is fine)
+    if (!useAuthStore.getState().isAuthenticated) return;
     markSignedIn();
     router.replace('/(app)/train');
   };
@@ -107,13 +108,20 @@ export function ReturningUserSignInScreen() {
             error={error}
           />
 
-          <AppText
-            variant="caption"
-            muted
-            className="text-center leading-relaxed"
-          >
-            {t('sign_in_terms')}
-          </AppText>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4 }}>
+            <AppText variant="caption" muted>{t('sign_in_terms_prefix')}</AppText>
+            <Pressable onPress={() => Linking.openURL('https://deeplyocean.com/terms')}>
+              <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
+                {t('sign_in_terms_link')}
+              </AppText>
+            </Pressable>
+            <AppText variant="caption" muted>{t('sign_in_terms_and')}</AppText>
+            <Pressable onPress={() => Linking.openURL('https://deeplyocean.com/privacy')}>
+              <AppText variant="caption" style={{ color: colors.accent, textDecorationLine: 'underline' }}>
+                {t('sign_in_privacy_link')}
+              </AppText>
+            </Pressable>
+          </View>
         </View>
       </View>
     </SafeAreaView>

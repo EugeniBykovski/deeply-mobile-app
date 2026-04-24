@@ -72,6 +72,9 @@ export interface OnboardingData {
 }
 
 interface OnboardingState {
+  /** True once the persist middleware has finished reading from FileSystem. */
+  _hasHydrated: boolean;
+
   /** True once the user has finished the onboarding questionnaire flow. */
   isCompleted: boolean;
 
@@ -123,6 +126,7 @@ const initialData: OnboardingData = {
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
+      _hasHydrated: false,
       isCompleted: false,
       hasEverSignedIn: false,
       language: 'en',
@@ -157,6 +161,25 @@ export const useOnboardingStore = create<OnboardingState>()(
     {
       name: 'deeply-onboarding',
       storage: createJSONStorage(() => fsStorage),
+      onRehydrateStorage: () => () => {
+        useOnboardingStore.setState({ _hasHydrated: true });
+      },
     },
   ),
 );
+
+/** Resolves once the persist middleware has finished reading from FileSystem. */
+export function waitForOnboardingHydration(): Promise<void> {
+  return new Promise((resolve) => {
+    if (useOnboardingStore.getState()._hasHydrated) {
+      resolve();
+      return;
+    }
+    const unsub = useOnboardingStore.subscribe((state) => {
+      if (state._hasHydrated) {
+        unsub();
+        resolve();
+      }
+    });
+  });
+}
