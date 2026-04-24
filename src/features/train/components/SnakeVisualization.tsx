@@ -146,4 +146,4 @@ export const SnakeVisualization = memo(function SnakeVisualization({
       />
     </View>
   );
-}
+});

@@ -53,7 +53,9 @@ export const PageTopBar = React.memo(function PageTopBar({
       </AppText>
 
       {rightSlot ?? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        // minWidth = ProHeaderButton slot (62) + gap (8) + ProfileButton (34) = 104
+        // Keeps the title's flex:1 area stable regardless of Pro state changes.
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minWidth: 104 }}>
           {showPro && <ProHeaderButton />}
           {showProfile && <ProfileButton />}
         </View>
