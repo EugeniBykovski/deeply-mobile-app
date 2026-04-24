@@ -80,12 +80,12 @@ export function TrainingRunScreen() {
   const currentStep = steps[stepIndex];
   const phaseColor  = PHASE_COLORS[currentStep?.phase ?? 'REST'] ?? colors.accent;
 
-  const phaseLabel: Record<string, string> = {
+  const phaseLabel = useMemo(() => ({
     INHALE: t('train_phase_inhale'),
     HOLD:   t('train_phase_hold'),
     EXHALE: t('train_phase_exhale'),
     REST:   t('train_phase_rest'),
-  };
+  }), [t]);
 
   // ─── Snake waypoints ─────────────────────────────────────────────────────────
 

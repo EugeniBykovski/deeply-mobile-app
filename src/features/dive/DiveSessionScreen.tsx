@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dimensions, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -102,17 +102,20 @@ export function DiveSessionScreen() {
     ],
   }));
 
-  // Shared values for surfacing detection — lets useAnimatedReaction read
-  // session state without crossing the JS bridge on every frame.
+  // Shared values that let the useAnimatedReaction worklet gate bridge crossings
+  // without reading JS-side state (which would require an extra runOnJS round-trip).
   const isSurfacingShared = useSharedValue(false);
   useEffect(() => {
     isSurfacingShared.value = sessionState === "surfacing";
   }, [sessionState, isSurfacingShared]);
 
-  // Shared value tracking the last integer depth reported to JS.
-  // Prevents runOnJS(updateDepth) from firing 60 times/second on the UI→JS bridge
-  // when the visible integer depth hasn't actually changed.
+  // Guards runOnJS(updateDepth) — only cross the bridge when the integer depth
+  // actually changes (at most maxDepthMeters times per descent/ascent).
   const lastReportedDepth = useSharedValue(-1);
+
+  // Guards runOnJS(markMaxDepthReached) — once per session is enough;
+  // without this, ~60–120 bridge crossings happen while value >= 0.98.
+  const hasMarkedMaxDepth = useSharedValue(false);
 
   // React state updaters called via runOnJS so they can be used from worklets.
   const updateDepth = useCallback((approx: number) => {
@@ -142,14 +145,18 @@ export function DiveSessionScreen() {
         lastReportedDepth.value = approxInt;
         runOnJS(updateDepth)(approxInt);
       }
-      if (value >= 0.98) {
+      if (value >= 0.98 && !hasMarkedMaxDepth.value) {
+        hasMarkedMaxDepth.value = true;
         runOnJS(markMaxDepthReached)();
       }
+      // Guard against the 1-frame window where isSurfacingShared is still true
+      // after a re-press during ascent: only call markSurfaced when depthProgress
+      // is genuinely at the surface (animation has actually reached bottom-up).
       if (isSurfacingShared.value && value <= 0.01) {
         runOnJS(markSurfaced)();
       }
     },
-    [maxDepthMeters, updateDepth, markMaxDepthReached, markSurfaced],
+    [maxDepthMeters, updateDepth, markMaxDepthReached, markSurfaced, hasMarkedMaxDepth],
   );
 
   // Reset depth display when idle/done.
@@ -267,10 +274,12 @@ export function DiveSessionScreen() {
 
   // ── Depth tape ─────────────────────────────────────────────────────────────
 
-  const tapeMarkers: number[] = [];
-  for (let m = 0; m <= maxDepthMeters; m += TAPE_STEPS) tapeMarkers.push(m);
-  if (tapeMarkers[tapeMarkers.length - 1] !== maxDepthMeters)
-    tapeMarkers.push(maxDepthMeters);
+  const tapeMarkers = useMemo(() => {
+    const markers: number[] = [];
+    for (let m = 0; m <= maxDepthMeters; m += TAPE_STEPS) markers.push(m);
+    if (markers[markers.length - 1] !== maxDepthMeters) markers.push(maxDepthMeters);
+    return markers;
+  }, [maxDepthMeters]);
 
   // ── Derived booleans ───────────────────────────────────────────────────────
 
