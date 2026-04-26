@@ -1,8 +1,8 @@
 import React from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { AppText } from '@/shared/components/AppText';
@@ -19,18 +19,27 @@ const BENEFITS: { icon: string; accent: string; titleKey: string; descKey: strin
 
 export function IntroScreen() {
   const { t } = useTranslation('onboarding');
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView className="flex-1 bg-brand-bg">
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style="light" />
       <LinearGradient
         colors={[colors.bg, '#0D2326', '#0B1C1D']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
 
-      <View className="flex-1 px-6">
+      <ScrollView
+        contentContainerStyle={{
+          paddingTop: insets.top + 12,
+          paddingBottom: insets.bottom + 24,
+          paddingHorizontal: 24,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Logo mark */}
-        <View className="items-center pt-12 pb-10">
+        <View style={{ alignItems: 'center', paddingTop: 24, paddingBottom: 32 }}>
           <Image
             source={require('../../../../assets/logo.png')}
             style={{ width: 80, height: 80, borderRadius: 20 }}
@@ -39,29 +48,38 @@ export function IntroScreen() {
           <AppText
             variant="display"
             weight="bold"
-            className="mt-4 tracking-wider"
+            style={{ marginTop: 16, letterSpacing: 2 }}
           >
             deeply
           </AppText>
-          <AppText variant="caption" muted className="tracking-widest uppercase mt-1">
+          <AppText variant="caption" muted style={{ letterSpacing: 4, textTransform: 'uppercase', marginTop: 4 }}>
             breathe · dive · focus
           </AppText>
         </View>
 
         {/* Title */}
-        <AppText variant="title" weight="bold" className="mb-2">
+        <AppText variant="title" weight="bold" style={{ marginBottom: 8 }}>
           {t('intro_title')}
         </AppText>
-        <AppText secondary className="mb-8 leading-relaxed">
+        <AppText secondary style={{ marginBottom: 24, lineHeight: 22 }}>
           {t('intro_subtitle')}
         </AppText>
 
         {/* Benefits */}
-        <View className="gap-3 flex-1">
+        <View style={{ gap: 12, marginBottom: 32 }}>
           {BENEFITS.map((b) => (
             <View
               key={b.titleKey}
-              className="flex-row items-center gap-4 bg-brand-surface rounded-brand-lg p-4 border border-brand-border"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 16,
+                backgroundColor: colors.surface,
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
             >
               <View
                 style={{
@@ -78,11 +96,11 @@ export function IntroScreen() {
               >
                 <LiIcon name={b.icon} size={22} color={b.accent} />
               </View>
-              <View className="flex-1">
-                <AppText weight="semibold" className="mb-0.5">
+              <View style={{ flex: 1 }}>
+                <AppText weight="semibold" style={{ marginBottom: 2 }}>
                   {t(b.titleKey)}
                 </AppText>
-                <AppText variant="caption" secondary className="leading-relaxed">
+                <AppText variant="caption" secondary style={{ lineHeight: 18 }}>
                   {t(b.descKey)}
                 </AppText>
               </View>
@@ -90,8 +108,8 @@ export function IntroScreen() {
           ))}
         </View>
 
-        {/* CTA */}
-        <View className="pb-6 pt-6 gap-3">
+        {/* CTA — in normal document flow, always below the last card */}
+        <View style={{ gap: 12 }}>
           <AppButton
             label={t('continue', { ns: 'common' })}
             variant="primary"
@@ -103,7 +121,8 @@ export function IntroScreen() {
           {/* Returning users on fresh install can skip the questionnaire */}
           <Pressable
             onPress={() => router.push('/signin' as any)}
-            className="items-center py-2 active:opacity-60"
+            style={{ alignItems: 'center', paddingVertical: 8 }}
+            className="active:opacity-60"
           >
             <AppText variant="caption" muted>
               {t('already_have_account')}{' '}
@@ -113,7 +132,7 @@ export function IntroScreen() {
             </AppText>
           </Pressable>
         </View>
-      </View>
-    </SafeAreaView>
+      </ScrollView>
+    </View>
   );
 }
