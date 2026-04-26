@@ -10,6 +10,7 @@ import Animated, {
   cancelAnimation,
   interpolateColor,
   runOnJS,
+  runOnUI,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
@@ -102,12 +103,11 @@ export function DiveSessionScreen() {
     ],
   }));
 
-  // Shared values that let the useAnimatedReaction worklet gate bridge crossings
-  // without reading JS-side state (which would require an extra runOnJS round-trip).
+  // Tracks surfacing state on the UI thread so the useAnimatedReaction below can
+  // check it without a runOnJS round-trip.  Set directly inside the runOnUI
+  // handlers (not via useEffect) so the flag is always in sync with the
+  // animation at the moment it starts — no one-render-cycle delay.
   const isSurfacingShared = useSharedValue(false);
-  useEffect(() => {
-    isSurfacingShared.value = sessionState === "surfacing";
-  }, [sessionState, isSurfacingShared]);
 
   // Guards runOnJS(updateDepth) — only cross the bridge when the integer depth
   // actually changes (at most maxDepthMeters times per descent/ascent).
@@ -183,39 +183,40 @@ export function DiveSessionScreen() {
     }
   }
 
-  // ── Descent / ascent ───────────────────────────────────────────────────────
-
-  function startDescent() {
-    const remaining = 1 - depthProgress.value;
-    const duration = remaining * targetHoldSeconds * 1000;
-    depthProgress.value = withTiming(1, { duration, easing: Easing.linear });
-  }
-
-  function startAscent() {
-    const duration = depthProgress.value * targetHoldSeconds * 1000 * 0.67;
-    depthProgress.value = withTiming(0, {
-      duration: Math.max(duration, 500),
-      easing: Easing.linear,
-    });
-  }
-
   // ── Press controls ─────────────────────────────────────────────────────────
+  //
+  // Animation scheduling runs inside runOnUI so that cancelAnimation and the
+  // new withTiming execute atomically on the UI thread.  This fixes the release
+  // snap: reading depthProgress.value from the JS thread returns the last
+  // JS-synced value (stale), while the UI thread has the true animated value.
+  // Running on the UI thread reads the real current position and starts the
+  // new tween without any race between the cancel and the start commands.
 
   function handlePressIn() {
     if (sessionState === "done") return;
-    cancelAnimation(depthProgress);
-    lastReportedDepth.value = -1; // force next frame to report current depth
+    lastReportedDepth.value = -1;
     setSessionState("holding");
     startHoldTimer();
-    startDescent();
+    runOnUI(() => {
+      cancelAnimation(depthProgress);
+      isSurfacingShared.value = false;
+      const remaining = 1 - depthProgress.value;
+      const duration = remaining * targetHoldSeconds * 1000;
+      depthProgress.value = withTiming(1, { duration, easing: Easing.linear });
+    })();
   }
 
   function handlePressOut() {
     if (sessionState === "done") return;
-    cancelAnimation(depthProgress);
     stopHoldTimer();
     setSessionState("surfacing");
-    startAscent();
+    runOnUI(() => {
+      cancelAnimation(depthProgress);
+      isSurfacingShared.value = true;
+      const current = depthProgress.value;
+      const duration = Math.max(current * targetHoldSeconds * 1000 * 0.67, 500);
+      depthProgress.value = withTiming(0, { duration, easing: Easing.linear });
+    })();
   }
 
   // Surfacing → idle transition is handled by the useAnimatedReaction above.
@@ -224,7 +225,12 @@ export function DiveSessionScreen() {
 
   const finishDive = useCallback(async () => {
     stopHoldTimer();
-    cancelAnimation(depthProgress);
+    // Cancel on the UI thread and clear isSurfacingShared atomically so
+    // the useAnimatedReaction cannot fire markSurfaced after we're done.
+    runOnUI(() => {
+      cancelAnimation(depthProgress);
+      isSurfacingShared.value = false;
+    })();
 
     const trueCompleted = reachedMaxDepthRef.current;
     const finalHold = totalHoldRef.current;
@@ -262,15 +268,19 @@ export function DiveSessionScreen() {
     } finally {
       setSaving(false);
     }
-  }, [templateId, title, depthProgress, queryClient, addDiveRun, updateDiveRunId]);
+  }, [templateId, title, depthProgress, isSurfacingShared, queryClient, addDiveRun, updateDiveRunId]);
 
   // Cleanup
   useEffect(() => {
     return () => {
       stopHoldTimer();
-      cancelAnimation(depthProgress);
+      runOnUI(() => {
+        cancelAnimation(depthProgress);
+        isSurfacingShared.value = false;
+      })();
     };
-  }, [depthProgress]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Depth tape ─────────────────────────────────────────────────────────────
 

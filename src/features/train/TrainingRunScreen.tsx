@@ -10,6 +10,7 @@ import Animated, {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -102,6 +103,65 @@ export function TrainingRunScreen() {
   const circleOpacity = useSharedValue(0.18);
   const ballX = useSharedValue(snakeWaypoints[0]?.x ?? 0);
   const ballY = useSharedValue(snakeWaypoints[0]?.y ?? 0);
+
+  // ─── Ball animation (withSequence — fully UI-thread-driven) ──────────────────
+  // Builds a withSequence covering every remaining step from `fromStep` onward.
+  // Because all segment timings are chained in one Reanimated sequence, the ball
+  // moves continuously with zero gap at waypoint boundaries, regardless of JS
+  // thread load in release/TestFlight.
+  const launchBallAnimation = useCallback(
+    (fromStep: number, fromTimeLeft: number) => {
+      if (!snakeWaypoints.length || !steps.length || fromStep >= steps.length) return;
+
+      cancelAnimation(ballX);
+      cancelAnimation(ballY);
+
+      // Snap ball to its correct mid-step position so it starts exactly where
+      // it should be (important on resume or round-restart).
+      const step   = steps[fromStep]!;
+      const total  = step.durationSeconds;
+      const elapsed  = total > 0 ? total - fromTimeLeft : 0;
+      const progress = total > 0 ? elapsed / total : 0;
+      const from = snakeWaypoints[fromStep]     ?? { x: 0, y: 0 };
+      const to   = snakeWaypoints[fromStep + 1] ?? from;
+
+      ballX.value = from.x + (to.x - from.x) * progress;
+      ballY.value = from.y + (to.y - from.y) * progress;
+
+      // Build the animation sequence: finish the current step, then every
+      // subsequent step in order.  withSequence runs entirely on the UI thread
+      // with no JS involvement at boundaries — no per-step re-trigger needed.
+      const xAnims: ReturnType<typeof withTiming>[] = [];
+      const yAnims: ReturnType<typeof withTiming>[] = [];
+
+      const firstDur = Math.max(fromTimeLeft * 1000, 16);
+      xAnims.push(withTiming(to.x, { duration: firstDur, easing: Easing.linear }));
+      yAnims.push(withTiming(to.y, { duration: firstDur, easing: Easing.linear }));
+
+      for (let i = fromStep + 1; i < steps.length; i++) {
+        const wp  = snakeWaypoints[i + 1] ?? snakeWaypoints[i] ?? { x: 0, y: 0 };
+        const dur = Math.max((steps[i]!.durationSeconds) * 1000, 16);
+        xAnims.push(withTiming(wp.x, { duration: dur, easing: Easing.linear }));
+        yAnims.push(withTiming(wp.y, { duration: dur, easing: Easing.linear }));
+      }
+
+      // withSequence requires at least 1 animation; guard is above (fromStep < steps.length).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (xAnims.length === 1) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ballX.value = xAnims[0] as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ballY.value = yAnims[0] as any;
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ballX.value = withSequence(...(xAnims as [any, ...any[]]));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ballY.value = withSequence(...(yAnims as [any, ...any[]]));
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [steps, snakeWaypoints],
+  );
 
   const animatedCircleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: breathScale.value }],
@@ -255,14 +315,29 @@ export function TrainingRunScreen() {
     return stopInterval;
   }, [runState, advance, stopInterval]);
 
+  // Re-launch the withSequence when a new round starts (roundIndex > 0 and just
+  // changed). The sequence for round 0 is launched from handleStart directly.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (roundIndex === 0 || runState !== 'running') return;
+    launchBallAnimation(0, steps[0]?.durationSeconds ?? 0);
+  // Only roundIndex in deps — we want this to fire exactly when a new round
+  // begins, not when launchBallAnimation reference changes (it's stable).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundIndex]);
+
   // ─── Controls ─────────────────────────────────────────────────────────────────
 
   async function handleStart() {
     if (steps.length === 0) return;
     setRunState('running');
+    // Launch the full-round withSequence immediately so ball starts moving on
+    // the same frame — no waiting for a stepIndex change or useEffect.
+    launchBallAnimation(0, steps[0]?.durationSeconds ?? 0);
 
     if (trainingId) {
       setInProgress(trainingId);
+      // Backend run creation is fire-and-forget — animation is never blocked by it.
       trainService
         .saveRun({ templateId: trainingId, completed: false })
         .then((r) => {
@@ -281,7 +356,12 @@ export function TrainingRunScreen() {
     setRunState('paused');
   }
 
-  function handleResume() { setRunState('running'); }
+  function handleResume() {
+    setRunState('running');
+    // Restart the withSequence from the current step and time remaining.
+    // timerTimeLeftRef.current holds the accurate per-second countdown.
+    launchBallAnimation(stepIndex, timerTimeLeftRef.current);
+  }
 
   function handleStop() {
     stopInterval();
@@ -413,8 +493,6 @@ export function TrainingRunScreen() {
                 <SnakeVisualization
                   steps={steps}
                   stepIndex={stepIndex}
-                  timeLeftRef={timerTimeLeftRef}
-                  runState={runState}
                   waypoints={snakeWaypoints}
                   ballX={ballX}
                   ballY={ballY}
