@@ -7,6 +7,7 @@ import Purchases, {
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import { usePurchaseStore, PRO_ENTITLEMENT } from '@/store/purchaseStore';
 import { purchaseService } from '@/api/services/purchase.service';
+import { queryClient } from '@/shared/lib/queryClient';
 
 export function usePurchases() {
   const { isPro, proExpiresAt, isLoading, isPurchasing } = usePurchaseStore();
@@ -125,4 +126,11 @@ async function syncAfterPurchase() {
     // Backend sync failure is non-fatal — SDK state is already updated
     await usePurchaseStore.getState().refreshFromSdk();
   }
+
+  // The backend now computes isLocked per-user, so all cached content
+  // responses that held isLocked: true for premium items must be
+  // re-fetched immediately so the UI reflects the unlocked state
+  // without requiring the user to restart the app.
+  queryClient.invalidateQueries({ queryKey: ['train'] });
+  queryClient.invalidateQueries({ queryKey: ['dive'] });
 }
