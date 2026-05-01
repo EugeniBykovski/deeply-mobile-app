@@ -5,17 +5,6 @@ import { StatusBar } from "expo-status-bar";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import Animated, {
-  Easing,
-  cancelAnimation,
-  interpolateColor,
-  runOnJS,
-  runOnUI,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 
 import { AppText } from "@/shared/components/AppText";
 import { LiIcon } from "@/shared/components/LiIcon";
@@ -29,9 +18,12 @@ const LANE_HEIGHT = SCREEN_H * 0.5;
 const DIVER_SIZE = 32;
 const TAPE_STEPS = 5;
 const BUTTON_SIZE = 120;
+const BG_COLOR = "#0d2d3a";
 
-const SURFACE_COLOR = "#0d2d3a";
-const ABYSS_COLOR = "#030a10";
+// Depth interval tick rate — frequent enough for smooth integer-meter jumps
+// without running hot. Position only visibly changes when the integer meter
+// crosses a boundary, so the true update cadence is (1000 / metersPerSecond) ms.
+const TICK_MS = 200;
 
 type SessionState = "idle" | "holding" | "surfacing" | "done";
 type SessionOutcome = "completed" | "interrupted";
@@ -69,102 +61,27 @@ export function DiveSessionScreen() {
   // Use || instead of ?? so that "0" falls back to 120 (null/undefined AND falsy zero)
   const targetHoldSeconds = Math.max(Number(params.targetHoldSeconds || "120"), 10);
 
+  // Meters advanced per TICK_MS interval tick while descending
+  const descentPerTick = (maxDepthMeters / targetHoldSeconds) * (TICK_MS / 1000);
+  // Ascent is faster than descent: same 0.67 ratio as the original surfacing duration
+  const ascentPerTick = descentPerTick / 0.67;
+
   // ── Session state ──────────────────────────────────────────────────────────
 
   const [sessionState, setSessionState] = useState<SessionState>("idle");
-  const [sessionOutcome, setSessionOutcome] = useState<SessionOutcome | null>(
-    null,
-  );
+  const [sessionOutcome, setSessionOutcome] = useState<SessionOutcome | null>(null);
   const [holdSeconds, setHoldSeconds] = useState(0);
   const [currentDepth, setCurrentDepth] = useState(0);
   const [maxReached, setMaxReached] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const totalHoldRef = useRef(0);
-  const maxReachedRef = useRef(0);
+  const holdIntervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const depthIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Fractional depth accumulator — drives integer-meter jumps in currentDepth
+  const depthAccumRef    = useRef(0);
+  const totalHoldRef     = useRef(0);
+  const maxReachedRef    = useRef(0);
   const reachedMaxDepthRef = useRef(false);
-
-  // ── Animated values ────────────────────────────────────────────────────────
-
-  const depthProgress = useSharedValue(0);
-
-  const bgStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      depthProgress.value,
-      [0, 1],
-      [SURFACE_COLOR, ABYSS_COLOR],
-    ),
-  }));
-
-  const diverStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: depthProgress.value * (LANE_HEIGHT - DIVER_SIZE) },
-    ],
-  }));
-
-  // Tracks surfacing state on the UI thread so the useAnimatedReaction below can
-  // check it without a runOnJS round-trip.  Set directly inside the runOnUI
-  // handlers (not via useEffect) so the flag is always in sync with the
-  // animation at the moment it starts — no one-render-cycle delay.
-  const isSurfacingShared = useSharedValue(false);
-
-  // Guards runOnJS(updateDepth) — only cross the bridge when the integer depth
-  // actually changes (at most maxDepthMeters times per descent/ascent).
-  const lastReportedDepth = useSharedValue(-1);
-
-  // Guards runOnJS(markMaxDepthReached) — once per session is enough;
-  // without this, ~60–120 bridge crossings happen while value >= 0.98.
-  const hasMarkedMaxDepth = useSharedValue(false);
-
-  // React state updaters called via runOnJS so they can be used from worklets.
-  const updateDepth = useCallback((approx: number) => {
-    setCurrentDepth(approx);
-    setMaxReached((prev) => {
-      const next = Math.max(prev, approx);
-      maxReachedRef.current = next;
-      return next;
-    });
-  }, []);
-  const markMaxDepthReached = useCallback(() => {
-    reachedMaxDepthRef.current = true;
-  }, []);
-  const markSurfaced = useCallback(() => {
-    setSessionState("idle");
-  }, []);
-
-  // Reads depthProgress on the UI thread and only calls runOnJS when the
-  // integer depth changes. Without the guard, runOnJS crosses the bridge
-  // 60 times/second in production (genuine inter-thread call), stalling the
-  // JS thread and causing the descent animation to lag and appear to jump.
-  useAnimatedReaction(
-    () => depthProgress.value,
-    (value) => {
-      const approxInt = Math.round(value * maxDepthMeters);
-      if (approxInt !== lastReportedDepth.value) {
-        lastReportedDepth.value = approxInt;
-        runOnJS(updateDepth)(approxInt);
-      }
-      if (value >= 0.98 && !hasMarkedMaxDepth.value) {
-        hasMarkedMaxDepth.value = true;
-        runOnJS(markMaxDepthReached)();
-      }
-      // Guard against the 1-frame window where isSurfacingShared is still true
-      // after a re-press during ascent: only call markSurfaced when depthProgress
-      // is genuinely at the surface (animation has actually reached bottom-up).
-      if (isSurfacingShared.value && value <= 0.01) {
-        runOnJS(markSurfaced)();
-      }
-    },
-    [maxDepthMeters, updateDepth, markMaxDepthReached, markSurfaced, hasMarkedMaxDepth],
-  );
-
-  // Reset depth display when idle/done.
-  useEffect(() => {
-    if (sessionState === "idle" || sessionState === "done") {
-      setCurrentDepth(0);
-    }
-  }, [sessionState]);
 
   // ── Hold timer ─────────────────────────────────────────────────────────────
 
@@ -183,54 +100,77 @@ export function DiveSessionScreen() {
     }
   }
 
+  // ── Depth progression (meter-by-meter) ────────────────────────────────────
+
+  function stopDepthInterval() {
+    if (depthIntervalRef.current) {
+      clearInterval(depthIntervalRef.current);
+      depthIntervalRef.current = null;
+    }
+  }
+
+  // Advances depth by descentPerTick each tick; position jumps when the
+  // integer-meter boundary is crossed (Math.round), giving the discrete
+  // step-by-step movement requested — no interpolation between meters.
+  function startDescent() {
+    stopDepthInterval();
+    depthIntervalRef.current = setInterval(() => {
+      depthAccumRef.current = Math.min(depthAccumRef.current + descentPerTick, maxDepthMeters);
+      const intDepth = Math.round(depthAccumRef.current);
+      setCurrentDepth(intDepth);
+      setMaxReached((prev) => {
+        const next = Math.max(prev, intDepth);
+        maxReachedRef.current = next;
+        return next;
+      });
+      if (depthAccumRef.current >= maxDepthMeters) {
+        reachedMaxDepthRef.current = true;
+        stopDepthInterval();
+      }
+    }, TICK_MS);
+  }
+
+  function startAscent() {
+    stopDepthInterval();
+    depthIntervalRef.current = setInterval(() => {
+      depthAccumRef.current = Math.max(depthAccumRef.current - ascentPerTick, 0);
+      setCurrentDepth(Math.round(depthAccumRef.current));
+      if (depthAccumRef.current <= 0) {
+        depthAccumRef.current = 0;
+        stopDepthInterval();
+        setSessionState("idle");
+      }
+    }, TICK_MS);
+  }
+
+  // Reset depth display when returning to idle or done
+  useEffect(() => {
+    if (sessionState === "idle" || sessionState === "done") {
+      setCurrentDepth(0);
+    }
+  }, [sessionState]);
+
   // ── Press controls ─────────────────────────────────────────────────────────
-  //
-  // Animation scheduling runs inside runOnUI so that cancelAnimation and the
-  // new withTiming execute atomically on the UI thread.  This fixes the release
-  // snap: reading depthProgress.value from the JS thread returns the last
-  // JS-synced value (stale), while the UI thread has the true animated value.
-  // Running on the UI thread reads the real current position and starts the
-  // new tween without any race between the cancel and the start commands.
 
   function handlePressIn() {
     if (sessionState === "done") return;
-    lastReportedDepth.value = -1;
     setSessionState("holding");
     startHoldTimer();
-    runOnUI(() => {
-      cancelAnimation(depthProgress);
-      isSurfacingShared.value = false;
-      const remaining = 1 - depthProgress.value;
-      const duration = remaining * targetHoldSeconds * 1000;
-      depthProgress.value = withTiming(1, { duration, easing: Easing.linear });
-    })();
+    startDescent();
   }
 
   function handlePressOut() {
     if (sessionState === "done") return;
     stopHoldTimer();
     setSessionState("surfacing");
-    runOnUI(() => {
-      cancelAnimation(depthProgress);
-      isSurfacingShared.value = true;
-      const current = depthProgress.value;
-      const duration = Math.max(current * targetHoldSeconds * 1000 * 0.67, 500);
-      depthProgress.value = withTiming(0, { duration, easing: Easing.linear });
-    })();
+    startAscent();
   }
-
-  // Surfacing → idle transition is handled by the useAnimatedReaction above.
 
   // ── Finish dive ────────────────────────────────────────────────────────────
 
   const finishDive = useCallback(async () => {
     stopHoldTimer();
-    // Cancel on the UI thread and clear isSurfacingShared atomically so
-    // the useAnimatedReaction cannot fire markSurfaced after we're done.
-    runOnUI(() => {
-      cancelAnimation(depthProgress);
-      isSurfacingShared.value = false;
-    })();
+    stopDepthInterval();
 
     const trueCompleted = reachedMaxDepthRef.current;
     const finalHold = totalHoldRef.current;
@@ -260,7 +200,6 @@ export function DiveSessionScreen() {
         holdSeconds: finalHold,
         completed: trueCompleted,
       });
-      // Sync local ID to the real backend run ID so deletion works
       updateDiveRunId(localId, saved.id);
       queryClient.invalidateQueries({ queryKey: ["results"] });
     } catch {
@@ -268,16 +207,14 @@ export function DiveSessionScreen() {
     } finally {
       setSaving(false);
     }
-  }, [templateId, title, depthProgress, isSurfacingShared, queryClient, addDiveRun, updateDiveRunId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId, templateSlug, title, queryClient, addDiveRun, updateDiveRunId]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopHoldTimer();
-      runOnUI(() => {
-        cancelAnimation(depthProgress);
-        isSurfacingShared.value = false;
-      })();
+      if (depthIntervalRef.current) clearInterval(depthIntervalRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -299,10 +236,13 @@ export function DiveSessionScreen() {
   const isIdle = sessionState === "idle";
   const isCompleted = isDone && sessionOutcome === "completed";
 
+  // Diver top offset calculated directly from integer depth — no animation
+  const diverTop = (currentDepth / maxDepthMeters) * (LANE_HEIGHT - DIVER_SIZE);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <Animated.View style={[{ flex: 1 }, bgStyle]}>
+    <View style={{ flex: 1, backgroundColor: BG_COLOR }}>
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         {/* Top bar */}
@@ -603,21 +543,18 @@ export function DiveSessionScreen() {
                     borderRadius: 1,
                   }}
                 />
-                {/* Animated diver */}
-                <Animated.View
-                  style={[
-                    {
-                      position: "absolute",
-                      left: "50%",
-                      top: 0,
-                      width: DIVER_SIZE,
-                      height: DIVER_SIZE,
-                      marginLeft: -(DIVER_SIZE / 2),
-                      alignItems: "center",
-                      justifyContent: "center",
-                    },
-                    diverStyle,
-                  ]}
+                {/* Diver — position jumps per meter, no animation */}
+                <View
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: diverTop,
+                    width: DIVER_SIZE,
+                    height: DIVER_SIZE,
+                    marginLeft: -(DIVER_SIZE / 2),
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
                   <View
                     style={{
@@ -635,7 +572,7 @@ export function DiveSessionScreen() {
                     size={DIVER_SIZE}
                     color={isHolding ? "#3BBFAD" : "rgba(255,255,255,0.7)"}
                   />
-                </Animated.View>
+                </View>
               </View>
 
               {/* Right spacer */}
@@ -663,13 +600,11 @@ export function DiveSessionScreen() {
                   gap: 4,
                   borderRadius: 100,
                   borderWidth: 1,
-                  borderColor: isHolding
-                    ? "rgba(255,255,255,0.22)"
-                    : "rgba(255,255,255,0.22)",
+                  borderColor: "rgba(255,255,255,0.22)",
                 }}
               >
                 <LiIcon
-                  name={isSurfacing ? "water-drop-1" : "water-drop-1"}
+                  name="water-drop-1"
                   size={28}
                   color={isHolding ? "#3BBFAD" : "rgba(255,255,255,0.55)"}
                 />
@@ -714,6 +649,6 @@ export function DiveSessionScreen() {
           </>
         )}
       </SafeAreaView>
-    </Animated.View>
+    </View>
   );
 }
