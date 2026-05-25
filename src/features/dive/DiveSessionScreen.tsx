@@ -88,20 +88,19 @@ export function DiveSessionScreen() {
             <DiveLane
               maxDepthMeters={maxDepthMeters}
               currentDepth={currentDepth}
+              meterProgress={meterProgress}
               isHolding={isHolding}
               statusLabel={statusLabel}
             />
             <DiveControls
               isHolding={isHolding}
               isSurfacing={isSurfacing}
-              meterProgress={meterProgress}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
               onFinish={finishDive}
               holdLabel={t("dive_session_hold")}
               releaseLabel={t("dive_session_release")}
               surfacingLabel={t("dive_session_surfacing")}
-              keepHoldingLabel={t("dive_session_keep_holding", { defaultValue: "keep holding" })}
               finishLabel={t("dive_session_finish")}
             />
           </>

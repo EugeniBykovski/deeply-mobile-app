@@ -1,24 +1,45 @@
 import React, { memo } from 'react';
 import { View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { PHASE_COLORS } from '@/constants/phase';
 import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
 
 export const SNAKE_HEIGHT = 200;
 
+const DOT_RADIUS = 7;
+
 interface SnakeVisualizationProps {
   steps: TrainingStep[];
   stepIndex: number;
   waypoints: { x: number; y: number }[];
+  dotX: SharedValue<number>;
+  dotY: SharedValue<number>;
 }
 
 export const SnakeVisualization = memo(function SnakeVisualization({
   steps,
   stepIndex,
   waypoints,
+  dotX,
+  dotY,
 }: SnakeVisualizationProps) {
+  const dotStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: dotX.value - DOT_RADIUS },
+      { translateY: dotY.value - DOT_RADIUS },
+    ],
+  }));
+
+  const currentPhaseColor =
+    PHASE_COLORS[steps[stepIndex]?.phase ?? 'REST'] ?? colors.accent;
+
   return (
     <View style={{ width: '100%', height: SNAKE_HEIGHT, position: 'relative' }}>
+      {/* Path segments */}
       {waypoints.slice(0, -1).map((from, i) => {
         const to = waypoints[i + 1]!;
         const dx = to.x - from.x;
@@ -48,6 +69,24 @@ export const SnakeVisualization = memo(function SnakeVisualization({
         );
       })}
 
+      {/* Animated dot — moves continuously along current segment */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: DOT_RADIUS * 2,
+            height: DOT_RADIUS * 2,
+            borderRadius: DOT_RADIUS,
+            backgroundColor: currentPhaseColor,
+            shadowColor: currentPhaseColor,
+            shadowOpacity: 0.7,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 4,
+          },
+          dotStyle,
+        ]}
+      />
     </View>
   );
 });

@@ -2,7 +2,9 @@ import '../global.css';
 import '@/i18n'; // initialise i18next synchronously before any render
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import { env } from '@/config/env';
 import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -27,6 +29,24 @@ export default function RootLayout() {
   const savedLanguage = useOnboardingStore((s) => s.language);
   const configurePurchases = usePurchaseStore((s) => s.configure);
 
+  // ── RevenueCat SDK init ──────────────────────────────────────────────────────
+  // Must run before any navigation so that getOfferings() works immediately
+  // when the paywall screen mounts. Runs once; guarded against re-renders.
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !env.rcAppleKey) {
+      usePurchaseStore.setState({ isLoading: false });
+      return;
+    }
+    if (__DEV__) {
+      Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+    }
+    Purchases.configure({ apiKey: env.rcAppleKey });
+    // Wire up the real-time entitlement listener + warm-up cache
+    configurePurchases();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── App bootstrap (auth + language) ─────────────────────────────────────────
   useEffect(() => {
     async function bootstrap() {
       try {
@@ -41,12 +61,6 @@ export default function RootLayout() {
         }
         // Restore auth session from SecureStore
         await restoreSession();
-
-        // Configure RevenueCat SDK as anonymous. The user profile fetch in
-        // restoreSession() is fire-and-forget, so user?.id is always undefined
-        // here. identify() is called inside restoreSession once the profile
-        // arrives to correctly associate the SDK with the authenticated user.
-        configurePurchases();
       } catch {
         // Non-fatal — proceed with defaults
       } finally {
@@ -153,7 +167,7 @@ export default function RootLayout() {
                 presentation: 'modal',
                 animation: 'slide_from_bottom',
                 headerShown: false,
-                contentStyle: { backgroundColor: 'transparent' },
+                contentStyle: { backgroundColor: colors.bg },
               }}
             />
             <Stack.Screen

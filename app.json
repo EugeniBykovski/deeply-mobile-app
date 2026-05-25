@@ -2,8 +2,8 @@
   "expo": {
     "name": "Deeply",
     "slug": "deeply-mobile",
-    "version": "1.0.5",
-    "buildNumber": "5",
+    "version": "1.0.7",
+    "buildNumber": "7",
     "scheme": "deeply",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
@@ -19,7 +19,8 @@
       "bundleIdentifier": "com.yauhenibykouski.deeply",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIDeviceFamily": [1]
       }
     },
     "android": {

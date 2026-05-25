@@ -1,7 +1,11 @@
 import { create } from 'zustand';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Purchases from 'react-native-purchases';
 import { env } from '@/config/env';
 import type { SubscriptionStatus } from '@/api/types';
+
+// Guards against adding the customerInfo listener more than once
+// (configure() may be called from multiple call sites after SDK init).
+let _listenerAdded = false;
 
 export const PRO_ENTITLEMENT = 'Deeply Pro';
 
@@ -31,35 +35,30 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
   isLoading: true,
   isPurchasing: false,
 
-  configure(userId) {
+  configure() {
     if (!env.rcAppleKey) {
       console.warn('[Purchases] EXPO_PUBLIC_REVENUECAT_APPLE_KEY is not set');
       set({ isLoading: false });
       return;
     }
 
-    if (env.isDev) {
-      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    // SDK initialisation (Purchases.configure + setLogLevel) is done in
+    // app/_layout.tsx before this is called. This method only wires up the
+    // real-time listener and warms up the customer-info cache.
+    if (!_listenerAdded) {
+      Purchases.addCustomerInfoUpdateListener((info) => {
+        const isActive = info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
+        const ent = info.entitlements.active[PRO_ENTITLEMENT];
+        set({
+          isPro: isActive,
+          proExpiresAt: ent?.expirationDate ?? null,
+          isLoading: false,
+        });
+      });
+      _listenerAdded = true;
     }
 
-    Purchases.configure({
-      apiKey: env.rcAppleKey,
-      appUserID: userId || undefined, // undefined = anonymous until sign-in
-    });
-
-    // Listen for real-time entitlement updates (e.g. subscription renewal)
-    Purchases.addCustomerInfoUpdateListener((info) => {
-      const isActive =
-        info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
-      const ent = info.entitlements.active[PRO_ENTITLEMENT];
-      set({
-        isPro: isActive,
-        proExpiresAt: ent?.expirationDate ?? null,
-        isLoading: false,
-      });
-    });
-
-    // Warm up: fetch current info
+    // Warm up: fetch current customer info
     get().refreshFromSdk();
   },
 

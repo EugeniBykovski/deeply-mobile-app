@@ -57,7 +57,7 @@ export function SignInScreen() {
       />
 
       <View className="flex-1 px-6 justify-between py-8">
-        {/* Top — logo + rings */}
+        {/* Top — logo rings only */}
         <View className="items-center pt-8">
           <View
             style={{
@@ -95,36 +95,49 @@ export function SignInScreen() {
           </View>
         </View>
 
-        {/* Middle — text */}
-        <View className="items-center gap-4">
-          <AppText variant="title" weight="bold" className="text-center">
-            {t('signin_title')}
-          </AppText>
-          <AppText secondary className="text-center leading-relaxed px-4">
-            {t('signin_subtitle')}
-          </AppText>
+        {/* Middle — title, subtitle, secondary sign-in */}
+        <View className="items-center gap-5">
+          <View className="items-center gap-3">
+            <AppText variant="title" weight="bold" className="text-center">
+              {t('signin_title')}
+            </AppText>
+            <AppText secondary className="text-center leading-relaxed px-4">
+              {t('signin_subtitle')}
+            </AppText>
+          </View>
+
+          {/* Secondary CTA — for returning users, smaller than Continue */}
+          <Pressable
+            onPress={handleSignInPress}
+            disabled={isLoading}
+            className="active:opacity-70"
+            style={{
+              paddingVertical: 9,
+              paddingHorizontal: 22,
+              borderRadius: 11,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.13)',
+              backgroundColor: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <AppText style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
+              {t('already_have_account')}{' '}
+              <AppText style={{ color: colors.accent, fontSize: 13 }}>
+                {t('sign_in', { ns: 'auth' })}
+              </AppText>
+            </AppText>
+          </Pressable>
         </View>
 
-        {/* Bottom — CTA */}
-        <View className="gap-4">
+        {/* Bottom — primary CTA + skip + legal */}
+        <View className="gap-3">
+          {/* Primary CTA */}
           <AppleAuthButton
             onPress={handleSignInPress}
             isLoading={isLoading}
             error={error}
             variant="sign_up"
           />
-
-          <Pressable
-            onPress={() => router.push('/signin' as any)}
-            className="items-center py-2 active:opacity-60"
-          >
-            <AppText variant="caption" muted>
-              {t('already_have_account')}{' '}
-              <AppText variant="caption" style={{ color: colors.accent }}>
-                {t('sign_in', { ns: 'auth' })}
-              </AppText>
-            </AppText>
-          </Pressable>
 
           <Pressable onPress={handleSkip} className="items-center py-2 active:opacity-60">
             <AppText muted variant="caption">

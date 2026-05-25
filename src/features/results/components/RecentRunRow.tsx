@@ -47,33 +47,41 @@ export function RecentRunRow({
     <Pressable onPress={handlePress} className="active:opacity-85">
       <View
         style={{
-          backgroundColor: selected ? `${colors.accent}15` : colors.surface,
+          backgroundColor: selected ? `${colors.accent}12` : colors.surface,
           borderWidth: 1,
-          borderColor: selected
-            ? `${colors.accent}50`
-            : item.completed
-              ? `${statusColor}30`
-              : colors.border,
+          borderColor: selectionMode
+            ? selected ? `${colors.accent}45` : colors.border
+            : item.completed ? `${statusColor}30` : colors.border,
           borderRadius: 14,
           padding: 14,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           {selectionMode ? (
+            /* Checkbox — accent fill + checkmark when selected, outlined when not */
             <View
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                backgroundColor: selected ? 'rgba(212,90,90,0.18)' : 'rgba(212,90,90,0.08)',
-                borderWidth: 1,
-                borderColor: selected ? 'rgba(212,90,90,0.6)' : 'rgba(212,90,90,0.2)',
+                width: 38,
+                height: 38,
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              <LiIcon name="trash" size={15} color={selected ? '#D45A5A' : 'rgba(212,90,90,0.5)'} />
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  borderWidth: selected ? 0 : 1.5,
+                  borderColor: 'rgba(255,255,255,0.22)',
+                  backgroundColor: selected ? colors.accent : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {selected && <LiIcon name="checkmark" size={13} color="#fff" />}
+              </View>
             </View>
           ) : (
             <View

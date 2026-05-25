@@ -8,7 +8,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import Animated, {
   Easing,
   cancelAnimation,
+  interpolateColor,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -30,6 +32,13 @@ import { Co2RatingPicker } from './components/Co2RatingPicker';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CIRCLE_SIZE = Math.min(Dimensions.get('window').width - 80, 220);
+
+// Phase order and color table used for UI-thread color interpolation.
+// Declared outside the component so they are never reallocated on re-render.
+const PHASE_ORDER = ['INHALE', 'HOLD', 'EXHALE', 'REST'] as const;
+const PHASE_COLOR_VALUES = PHASE_ORDER.map(
+  (p) => PHASE_COLORS[p] ?? '#3BBFAD',
+) as [string, string, string, string];
 
 type RunState = 'idle' | 'running' | 'paused' | 'done';
 
@@ -101,9 +110,32 @@ export function TrainingRunScreen() {
   const breathScale   = useSharedValue(PHASE_SCALE_FROM[steps[0]?.phase ?? 'REST'] ?? 0.55);
   const circleOpacity = useSharedValue(0.18);
 
+  // Numeric index that animates between 0-3 so we can interpolate phase colors
+  // entirely on the UI thread — no JS-thread color string swaps between phases.
+  const phaseProgress = useSharedValue(
+    PHASE_ORDER.indexOf((steps[0]?.phase ?? 'REST') as any),
+  );
+
+  // Snake dot position — driven with withTiming + Easing.linear for continuous motion
+  const snakeDotX = useSharedValue(snakeWaypoints[0]?.x ?? 0);
+  const snakeDotY = useSharedValue(snakeWaypoints[0]?.y ?? 0);
+
+  const animatedPhaseColor = useDerivedValue(() =>
+    interpolateColor(
+      phaseProgress.value,
+      [0, 1, 2, 3],
+      PHASE_COLOR_VALUES as [string, string, string, string],
+    ),
+  );
+
   const animatedCircleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: breathScale.value }],
     opacity: circleOpacity.value,
+    backgroundColor: animatedPhaseColor.value,
+  }));
+
+  const animatedBorderStyle = useAnimatedStyle(() => ({
+    borderColor: animatedPhaseColor.value,
   }));
 
   // ─── Timer mode animation ─────────────────────────────────────────────────────
@@ -139,6 +171,40 @@ export function TrainingRunScreen() {
       currentStep.phase === 'HOLD' ? 0.28 : 0.18,
       { duration: 400 },
     );
+    // Animate phase color on the UI thread instead of swapping hex strings
+    // via a React state update — prevents the abrupt color snap between phases.
+    const nextPhaseIdx = PHASE_ORDER.indexOf(currentStep.phase as any);
+    if (nextPhaseIdx !== -1) {
+      phaseProgress.value = withTiming(nextPhaseIdx, { duration: 350, easing: Easing.out(Easing.quad) });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIndex, runState, visualizationMode]);
+
+  // ─── Snake dot animation ──────────────────────────────────────────────────────
+  // Drives snakeDotX/Y linearly across the current segment for the step duration.
+  // Snap to the elapsed-proportional position first, then withTiming the remainder.
+  useEffect(() => {
+    if (visualizationMode !== 'snake') return;
+
+    if (runState === 'paused' || runState === 'idle') {
+      cancelAnimation(snakeDotX);
+      cancelAnimation(snakeDotY);
+      return;
+    }
+    if (runState !== 'running' || !currentStep) return;
+
+    const wp     = snakeWaypoints[stepIndex];
+    const wpNext = snakeWaypoints[stepIndex + 1];
+    if (!wp || !wpNext) return;
+
+    const total     = currentStep.durationSeconds;
+    const remaining = timerTimeLeftRef.current;
+    const progress  = total > 0 ? (total - remaining) / total : 0;
+
+    snakeDotX.value = wp.x + (wpNext.x - wp.x) * progress;
+    snakeDotY.value = wp.y + (wpNext.y - wp.y) * progress;
+    snakeDotX.value = withTiming(wpNext.x, { duration: Math.max(remaining * 1000, 16), easing: Easing.linear });
+    snakeDotY.value = withTiming(wpNext.y, { duration: Math.max(remaining * 1000, 16), easing: Easing.linear });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, runState, visualizationMode]);
 
@@ -273,6 +339,8 @@ export function TrainingRunScreen() {
   function handlePause() {
     stopInterval();
     cancelAnimation(breathScale);
+    cancelAnimation(snakeDotX);
+    cancelAnimation(snakeDotY);
     setRunState('paused');
   }
 
@@ -283,6 +351,8 @@ export function TrainingRunScreen() {
   function handleStop() {
     stopInterval();
     cancelAnimation(breathScale);
+    cancelAnimation(snakeDotX);
+    cancelAnimation(snakeDotY);
     finishRun(false);
     router.back();
   }
@@ -374,18 +444,23 @@ export function TrainingRunScreen() {
               <View
                 style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE, alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}
               >
+                {/* Filled background — scale + opacity + color all driven by Reanimated */}
                 <Animated.View
                   style={[
-                    { position: 'absolute', width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2, backgroundColor: phaseColor },
+                    { position: 'absolute', width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2 },
                     animatedCircleStyle,
                   ]}
                 />
-                <View
-                  style={{
-                    position: 'absolute', width: CIRCLE_SIZE, height: CIRCLE_SIZE,
-                    borderRadius: CIRCLE_SIZE / 2, borderWidth: 2.5,
-                    borderColor: isIdle ? colors.border : phaseColor,
-                  }}
+                {/* Border ring — color fades between phases on UI thread */}
+                <Animated.View
+                  style={[
+                    {
+                      position: 'absolute', width: CIRCLE_SIZE, height: CIRCLE_SIZE,
+                      borderRadius: CIRCLE_SIZE / 2, borderWidth: 2.5,
+                      borderColor: isIdle ? colors.border : undefined,
+                    },
+                    !isIdle && animatedBorderStyle,
+                  ]}
                 />
                 {isIdle ? (
                   <AppText variant="caption" muted style={{ textAlign: 'center', paddingHorizontal: 32 }}>
@@ -409,6 +484,8 @@ export function TrainingRunScreen() {
                   steps={steps}
                   stepIndex={stepIndex}
                   waypoints={snakeWaypoints}
+                  dotX={snakeDotX}
+                  dotY={snakeDotY}
                 />
                 {isIdle ? (
                   <AppText variant="caption" muted style={{ textAlign: 'center', marginTop: 12 }}>
