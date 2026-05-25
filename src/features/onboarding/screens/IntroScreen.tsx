@@ -1,32 +1,57 @@
-import React from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
-import { router } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
-import { AppText } from '@/shared/components/AppText';
-import { AppButton } from '@/shared/components/AppButton';
-import { LiIcon } from '@/shared/components/LiIcon';
-import { colors } from '@/theme';
+import React from "react";
+import { Image, Pressable, ScrollView, View } from "react-native";
+import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import { AppText } from "@/shared/components/AppText";
+import { AppButton } from "@/shared/components/AppButton";
+import { LiIcon } from "@/shared/components/LiIcon";
+import { colors } from "@/theme";
 
-const BENEFITS: { icon: string; accent: string; titleKey: string; descKey: string }[] = [
-  { icon: 'water-drop-1', accent: '#3BBFAD', titleKey: 'benefit_1_title', descKey: 'benefit_1_desc' },
-  { icon: 'stopwatch',    accent: '#D4915A', titleKey: 'benefit_2_title', descKey: 'benefit_2_desc' },
-  { icon: 'trend-up-1',  accent: '#5A8FBF', titleKey: 'benefit_3_title', descKey: 'benefit_3_desc' },
-  { icon: 'books-2',     accent: '#8B7BB5', titleKey: 'benefit_4_title', descKey: 'benefit_4_desc' },
+const BENEFITS: {
+  icon: string;
+  accent: string;
+  titleKey: string;
+  descKey: string;
+}[] = [
+  {
+    icon: "water-drop-1",
+    accent: "#3BBFAD",
+    titleKey: "benefit_1_title",
+    descKey: "benefit_1_desc",
+  },
+  {
+    icon: "stopwatch",
+    accent: "#D4915A",
+    titleKey: "benefit_2_title",
+    descKey: "benefit_2_desc",
+  },
+  {
+    icon: "trend-up-1",
+    accent: "#5A8FBF",
+    titleKey: "benefit_3_title",
+    descKey: "benefit_3_desc",
+  },
+  {
+    icon: "books-2",
+    accent: "#8B7BB5",
+    titleKey: "benefit_4_title",
+    descKey: "benefit_4_desc",
+  },
 ];
 
 export function IntroScreen() {
-  const { t } = useTranslation('onboarding');
+  const { t } = useTranslation("onboarding");
   const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style="light" />
       <LinearGradient
-        colors={[colors.bg, '#0D2326', '#0B1C1D']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        colors={[colors.bg, "#0D2326", "#0B1C1D"]}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       />
 
       <ScrollView
@@ -39,9 +64,11 @@ export function IntroScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Logo mark */}
-        <View style={{ alignItems: 'center', paddingTop: 24, paddingBottom: 32 }}>
+        <View
+          style={{ alignItems: "center", paddingTop: 24, paddingBottom: 32 }}
+        >
           <Image
-            source={require('../../../../assets/logo.png')}
+            source={require("../../../../assets/logo.png")}
             style={{ width: 80, height: 80, borderRadius: 20 }}
             resizeMode="contain"
           />
@@ -50,33 +77,41 @@ export function IntroScreen() {
             weight="bold"
             style={{ marginTop: 16, letterSpacing: 2 }}
           >
-            deeply
+            Deeply
           </AppText>
-          <AppText variant="caption" muted style={{ letterSpacing: 4, textTransform: 'uppercase', marginTop: 4 }}>
+          <AppText
+            variant="caption"
+            muted
+            style={{
+              letterSpacing: 4,
+              textTransform: "uppercase",
+              marginTop: 4,
+            }}
+          >
             breathe · dive · focus
           </AppText>
         </View>
 
         {/* Title */}
         <AppText variant="title" weight="bold" style={{ marginBottom: 8 }}>
-          {t('intro_title')}
+          {t("intro_title")}
         </AppText>
         <AppText secondary style={{ marginBottom: 24, lineHeight: 22 }}>
-          {t('intro_subtitle')}
+          {t("intro_subtitle")}
         </AppText>
 
         {/* Benefits */}
-        <View style={{ gap: 12, marginBottom: 32 }}>
+        <View style={{ gap: 12, marginBottom: 20 }}>
           {BENEFITS.map((b) => (
             <View
               key={b.titleKey}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 16,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
                 backgroundColor: colors.surface,
                 borderRadius: 16,
-                padding: 16,
+                padding: 12,
                 borderWidth: 1,
                 borderColor: colors.border,
               }}
@@ -89,8 +124,8 @@ export function IntroScreen() {
                   backgroundColor: `${b.accent}18`,
                   borderWidth: 1,
                   borderColor: `${b.accent}30`,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  alignItems: "center",
+                  justifyContent: "center",
                   flexShrink: 0,
                 }}
               >
@@ -108,29 +143,34 @@ export function IntroScreen() {
           ))}
         </View>
 
+        {/* Returning users on fresh install can skip the questionnaire */}
+        <Pressable
+          onPress={() => router.push("/signin" as any)}
+          style={{ alignItems: "center", paddingVertical: 6 }}
+          className="active:opacity-60 mb-5"
+        >
+          <AppText variant="caption" muted>
+            {t("already_have_account")}{" "}
+            <AppText
+              variant="heading"
+              style={{
+                color: colors.inkSecondary,
+              }}
+            >
+              {t("sign_in", { ns: "auth" })}
+            </AppText>
+          </AppText>
+        </Pressable>
+
         {/* CTA — in normal document flow, always below the last card */}
         <View style={{ gap: 12 }}>
           <AppButton
-            label={t('continue', { ns: 'common' })}
+            label={t("continue", { ns: "common" })}
             variant="primary"
             size="lg"
             className="w-full"
-            onPress={() => router.push('/(onboarding)/goals')}
+            onPress={() => router.push("/(onboarding)/goals")}
           />
-
-          {/* Returning users on fresh install can skip the questionnaire */}
-          <Pressable
-            onPress={() => router.push('/signin' as any)}
-            style={{ alignItems: 'center', paddingVertical: 8 }}
-            className="active:opacity-60"
-          >
-            <AppText variant="caption" muted>
-              {t('already_have_account')}{' '}
-              <AppText variant="caption" style={{ color: colors.accent }}>
-                {t('sign_in', { ns: 'auth' })}
-              </AppText>
-            </AppText>
-          </Pressable>
         </View>
       </ScrollView>
     </View>
