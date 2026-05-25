@@ -63,14 +63,14 @@ export const ProHeaderButton = React.memo(function ProHeaderButton() {
       <Pressable
         onPress={() => router.push("/paywall" as any)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        className="active:opacity-65"
+        className="active:opacity-50"
       >
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
-            backgroundColor: colors.accent,
+            backgroundColor: colors.warning,
             borderRadius: 20,
             paddingHorizontal: 20,
             paddingVertical: 6,
@@ -78,9 +78,9 @@ export const ProHeaderButton = React.memo(function ProHeaderButton() {
         >
           <AppText
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: colors.inkInverse,
-              fontWeight: "700",
+              fontWeight: "800",
               letterSpacing: 0.2,
             }}
           >
