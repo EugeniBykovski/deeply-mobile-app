@@ -107,5 +107,24 @@
   "culture_all": "All",
   "culture_empty": "No articles yet.",
   "culture_min_read": "{{count}} min read",
-  "culture_sections_empty": "No sections available."
+  "culture_sections_empty": "No sections available.",
+
+  "dive_difficulty_easy": "Easy",
+  "dive_difficulty_medium": "Medium",
+  "dive_difficulty_hard": "Hard",
+  "dive_hold_suffix": "hold",
+
+  "train_done_count": "{{count}} done",
+  "train_in_progress_count": "{{count}} in progress",
+  "train_free_locked_summary": "{{free}} free · {{locked}} locked",
+
+  "results_delete_selected": "Delete ({{count}})",
+  "results_confirm_delete_title": "Delete {{count}} items?",
+  "results_confirm_delete_body": "This cannot be undone.",
+  "results_confirm_delete_all_title": "Delete all activity?",
+  "results_confirm_delete_all_body": "All training and dive runs will be permanently removed.",
+  "results_delete": "Delete",
+  "results_delete_all": "Delete All",
+  "results_delete_failed": "Delete failed",
+  "results_delete_failed_body": "Could not delete this item. Please try again."
 }

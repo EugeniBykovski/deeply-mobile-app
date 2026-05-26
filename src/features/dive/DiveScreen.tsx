@@ -12,6 +12,7 @@ import { LiIcon } from '@/shared/components/LiIcon';
 import { PageTopBar } from '@/shared/components/PageTopBar';
 import { LockedSheet } from '@/shared/components/LockedSheet';
 import { useDiveTemplates } from './hooks/useDiveTemplates';
+import { useDiveSessionStore } from '@/store/diveSessionStore';
 import type { DiveTemplateItem } from '@/api/types';
 import { colors } from '@/theme';
 
@@ -22,13 +23,6 @@ const DIFFICULTY_COLOR: Record<string, string> = {
   MEDIUM: '#D4B95A',
   HARD:   '#D4915A',
 };
-
-function difficultyLabel(d: string): string {
-  if (d === 'EASY')   return 'Easy';
-  if (d === 'MEDIUM') return 'Medium';
-  if (d === 'HARD')   return 'Hard';
-  return d;
-}
 
 function formatHold(s: number): string {
   const m = Math.floor(s / 60);
@@ -41,7 +35,16 @@ function formatHold(s: number): string {
 // ─── Dive card ────────────────────────────────────────────────────────────────
 
 function DiveCard({ item, onLockedPress }: { item: DiveTemplateItem; onLockedPress: () => void }) {
-  const diffColor = DIFFICULTY_COLOR[item.difficulty] ?? colors.accent;
+  const { t } = useTranslation('tabs');
+  const { statusByDiveId } = useDiveSessionStore();
+  const effectiveStatus = statusByDiveId[item.id] ?? null;
+  const diffColor   = DIFFICULTY_COLOR[item.difficulty] ?? colors.accent;
+  const statusColor = effectiveStatus === 'completed' ? '#3BBFAD' : '#D4915A';
+
+  const diffLabel = (
+    { EASY: t('dive_difficulty_easy'), MEDIUM: t('dive_difficulty_medium'), HARD: t('dive_difficulty_hard') }
+    [item.difficulty] ?? item.difficulty
+  );
 
   function handlePress() {
     if (item.isLocked) {
@@ -94,18 +97,38 @@ function DiveCard({ item, onLockedPress }: { item: DiveTemplateItem; onLockedPre
           ) : null}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 6, alignItems: 'center' }}>
             <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: `${diffColor}18` }}>
-              <AppText variant="label" style={{ color: diffColor }}>{difficultyLabel(item.difficulty)}</AppText>
+              <AppText variant="label" style={{ color: diffColor }}>{diffLabel}</AppText>
             </View>
             {item.targetHoldSeconds != null && (
-              <AppText variant="caption" muted>{formatHold(item.targetHoldSeconds)} hold</AppText>
+              <AppText variant="caption" muted>
+                {formatHold(item.targetHoldSeconds)} {t('dive_hold_suffix')}
+              </AppText>
             )}
           </View>
         </View>
 
+        {/* Locked label or status badge or chevron */}
         {item.isLocked ? (
-          <AppText variant="label" style={{ color: colors.warning }}>Premium</AppText>
-        ) : (
+          <AppText variant="label" style={{ color: colors.warning }}>{t('dive_locked_label')}</AppText>
+        ) : effectiveStatus === null ? (
           <LiIcon name="chevron-right" size={14} color={colors.inkMuted} />
+        ) : null}
+
+        {/* Progress badge — absolutely positioned so it doesn't shift layout */}
+        {!item.isLocked && effectiveStatus !== null && (
+          <View
+            style={{
+              position: 'absolute', top: 8, right: 8,
+              backgroundColor: `${statusColor}18`,
+              borderRadius: 20, padding: 3,
+            }}
+          >
+            <LiIcon
+              name={effectiveStatus === 'completed' ? 'checkmark-circle-fill' : 'clock-fill'}
+              size={16}
+              color={statusColor}
+            />
+          </View>
         )}
       </View>
     </Pressable>

@@ -5,6 +5,7 @@ import {
   Pressable,
   RefreshControl,
   Image,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -81,10 +82,24 @@ function FilterChip({
   );
 }
 
+// ─── Cover images for article cards without a remote URL ─────────────────────
+
+const FALLBACK_COVERS = [
+  require('../../../assets/dive1.jpg.webp') as ReturnType<typeof require>,
+  require('../../../assets/dive2.jpg.webp') as ReturnType<typeof require>,
+];
+
 // ─── Article card ─────────────────────────────────────────────────────────────
 
-function ArticleCard({ article }: { article: CultureArticleListItem }) {
+function ArticleCard({
+  article,
+  coverIndex,
+}: {
+  article: CultureArticleListItem;
+  coverIndex: number;
+}) {
   const { t } = useTranslation('tabs');
+  const fallbackCover = FALLBACK_COVERS[coverIndex % FALLBACK_COVERS.length];
 
   return (
     <Pressable
@@ -112,17 +127,19 @@ function ArticleCard({ article }: { article: CultureArticleListItem }) {
             resizeMode="cover"
           />
         ) : (
-          <View
-            style={{
-              width: '100%',
-              height: 160,
-              backgroundColor: '#122628',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+          <ImageBackground
+            source={fallbackCover}
+            style={{ width: '100%', height: 160 }}
+            resizeMode="cover"
           >
-            <LiIcon name="books-2" size={40} color={colors.inkMuted} />
-          </View>
+            {/* Subtle dark vignette so the card feels polished even without remote art */}
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(11,28,40,0.38)',
+              }}
+            />
+          </ImageBackground>
         )}
 
         <View style={{ padding: 16 }}>
@@ -231,8 +248,8 @@ export function CultureScreen() {
             {articles.length === 0 ? (
               <EmptyView message={t('culture_empty')} />
             ) : (
-              articles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
+              articles.map((article, index) => (
+                <ArticleCard key={article.id} article={article} coverIndex={index} />
               ))
             )}
           </ScrollView>

@@ -32,9 +32,10 @@ export function useDiveSession({
   maxDepthMeters,
   targetHoldSeconds,
 }: UseDiveSessionOptions): DiveSessionReturn {
-  const queryClient      = useQueryClient();
-  const addDiveRun       = useDiveSessionStore((s) => s.addRun);
-  const updateDiveRunId  = useDiveSessionStore((s) => s.updateRunId);
+  const queryClient       = useQueryClient();
+  const addDiveRun        = useDiveSessionStore((s) => s.addRun);
+  const updateDiveRunId   = useDiveSessionStore((s) => s.updateRunId);
+  const setDiveInProgress = useDiveSessionStore((s) => s.setDiveInProgress);
 
   // Meters gained per TICK_MS tick while descending
   const descentPerTick = (maxDepthMeters / targetHoldSeconds) * (TICK_MS / 1000);
@@ -131,6 +132,7 @@ export function useDiveSession({
   function handlePressIn() {
     if (sessionState === "done") return;
     setSessionState("holding");
+    setDiveInProgress(templateId);
     startHoldTimer();
     startDescent();
   }

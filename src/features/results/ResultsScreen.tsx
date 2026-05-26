@@ -161,11 +161,9 @@ export function ResultsScreen() {
 
       if (!item.id.startsWith("local-") && !item.id.startsWith("dive-local-")) {
         try {
-          console.log("[deleteItem] calling DELETE type=%s id=%s", item.type, item.id);
           await resultsService.deleteRun(item.type as "training" | "dive", item.id);
-        } catch (err: any) {
-          console.error("[deleteItem] failed status=%s data=%o", err?.response?.status, err?.response?.data);
-          Alert.alert("Delete failed", "Could not delete this item. Please try again.");
+        } catch {
+          Alert.alert(t("results_delete_failed"), t("results_delete_failed_body"));
         }
       }
       queryClient.invalidateQueries({ queryKey: ["results"] });
@@ -184,14 +182,14 @@ export function ResultsScreen() {
 
   const confirmDeleteSelected = useCallback(() => {
     Alert.alert(
-      `Delete ${selectedIds.size} item${selectedIds.size > 1 ? "s" : ""}?`,
-      "This cannot be undone.",
+      t("results_confirm_delete_title", { count: selectedIds.size }),
+      t("results_confirm_delete_body"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: deleteSelected },
+        { text: t("cancel", { ns: "common" }), style: "cancel" },
+        { text: t("results_delete"), style: "destructive", onPress: deleteSelected },
       ],
     );
-  }, [selectedIds.size, deleteSelected]);
+  }, [selectedIds.size, deleteSelected, t]);
 
   const deleteAll = useCallback(async () => {
     useTrainingSessionStore.setState({ runs: [] });
@@ -207,14 +205,14 @@ export function ResultsScreen() {
 
   const confirmDeleteAll = useCallback(() => {
     Alert.alert(
-      "Delete all activity?",
-      "This will permanently remove all your training and dive runs.",
+      t("results_confirm_delete_all_title"),
+      t("results_confirm_delete_all_body"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete All", style: "destructive", onPress: deleteAll },
+        { text: t("cancel", { ns: "common" }), style: "cancel" },
+        { text: t("results_delete_all"), style: "destructive", onPress: deleteAll },
       ],
     );
-  }, [deleteAll]);
+  }, [deleteAll, t]);
 
   const isLoading = isAuthenticated && summaryQuery.isLoading;
   const isError = isAuthenticated && summaryQuery.isError;
@@ -313,7 +311,7 @@ export function ResultsScreen() {
                         className="active:opacity-70"
                       >
                         <AppText variant="caption" style={{ color: "#D45A5A" }}>
-                          Delete ({selectedIds.size})
+                          {t("results_delete_selected", { count: selectedIds.size })}
                         </AppText>
                       </Pressable>
                     )}
@@ -322,7 +320,7 @@ export function ResultsScreen() {
                       className="active:opacity-70"
                     >
                       <AppText variant="caption" muted>
-                        Cancel
+                        {t("cancel", { ns: "common" })}
                       </AppText>
                     </Pressable>
                   </View>

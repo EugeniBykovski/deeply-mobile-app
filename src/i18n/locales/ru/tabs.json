@@ -107,5 +107,24 @@
   "culture_all": "Все",
   "culture_empty": "Статей пока нет.",
   "culture_min_read": "{{count}} мин чтения",
-  "culture_sections_empty": "Разделы пока недоступны."
+  "culture_sections_empty": "Разделы пока недоступны.",
+
+  "dive_difficulty_easy": "Лёгкий",
+  "dive_difficulty_medium": "Средний",
+  "dive_difficulty_hard": "Сложный",
+  "dive_hold_suffix": "задержка",
+
+  "train_done_count": "{{count}} выполнено",
+  "train_in_progress_count": "{{count}} в процессе",
+  "train_free_locked_summary": "{{free}} бесплатно · {{locked}} закрыто",
+
+  "results_delete_selected": "Удалить ({{count}})",
+  "results_confirm_delete_title": "Удалить {{count}} записей?",
+  "results_confirm_delete_body": "Это нельзя отменить.",
+  "results_confirm_delete_all_title": "Удалить всю активность?",
+  "results_confirm_delete_all_body": "Все тренировки и погружения будут безвозвратно удалены.",
+  "results_delete": "Удалить",
+  "results_delete_all": "Удалить всё",
+  "results_delete_failed": "Ошибка удаления",
+  "results_delete_failed_body": "Не удалось удалить запись. Попробуйте ещё раз."
 }
