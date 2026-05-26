@@ -62,7 +62,7 @@ export const DiveLane = memo(function DiveLane({
 
   return (
     <>
-      {/* Depth counter: "2 m 00 cm" */}
+      {/* Depth counter: "1 m 4 cm" */}
       <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
           <AppText
@@ -78,7 +78,7 @@ export const DiveLane = memo(function DiveLane({
             weight="bold"
             style={{ fontSize: 54, lineHeight: 60, color: 'rgba(255,255,255,0.72)' }}
           >
-            {String(centimetres).padStart(2, '0')}
+            {centimetres}
           </AppText>
           <AppText style={{ color: 'rgba(255,255,255,0.35)', fontSize: 18 }}>
             cm

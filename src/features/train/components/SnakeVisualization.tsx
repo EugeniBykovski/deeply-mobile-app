@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
+  type DerivedValue,
   type SharedValue,
 } from 'react-native-reanimated';
 import { PHASE_COLORS } from '@/constants/phase';
@@ -16,8 +17,8 @@ interface SnakeVisualizationProps {
   steps: TrainingStep[];
   stepIndex: number;
   waypoints: { x: number; y: number }[];
-  dotX: SharedValue<number>;
-  dotY: SharedValue<number>;
+  dotX: SharedValue<number> | DerivedValue<number>;
+  dotY: SharedValue<number> | DerivedValue<number>;
 }
 
 export const SnakeVisualization = memo(function SnakeVisualization({

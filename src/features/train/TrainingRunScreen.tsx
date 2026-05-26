@@ -116,9 +116,19 @@ export function TrainingRunScreen() {
     PHASE_ORDER.indexOf((steps[0]?.phase ?? 'REST') as any),
   );
 
-  // Snake dot position — driven with withTiming + Easing.linear for continuous motion
-  const snakeDotX = useSharedValue(snakeWaypoints[0]?.x ?? 0);
-  const snakeDotY = useSharedValue(snakeWaypoints[0]?.y ?? 0);
+  // Single progress value + UI-thread derived X/Y — no timing drift between axes
+  const snakeFromX    = useSharedValue(snakeWaypoints[0]?.x ?? 0);
+  const snakeFromY    = useSharedValue(snakeWaypoints[0]?.y ?? 0);
+  const snakeToX      = useSharedValue(snakeWaypoints[1]?.x ?? snakeWaypoints[0]?.x ?? 0);
+  const snakeToY      = useSharedValue(snakeWaypoints[1]?.y ?? snakeWaypoints[0]?.y ?? 0);
+  const snakeProgress = useSharedValue(0);
+
+  const snakeDotX = useDerivedValue(() =>
+    snakeFromX.value + (snakeToX.value - snakeFromX.value) * snakeProgress.value,
+  );
+  const snakeDotY = useDerivedValue(() =>
+    snakeFromY.value + (snakeToY.value - snakeFromY.value) * snakeProgress.value,
+  );
 
   const animatedPhaseColor = useDerivedValue(() =>
     interpolateColor(
@@ -181,14 +191,14 @@ export function TrainingRunScreen() {
   }, [stepIndex, runState, visualizationMode]);
 
   // ─── Snake dot animation ──────────────────────────────────────────────────────
-  // Drives snakeDotX/Y linearly across the current segment for the step duration.
-  // Snap to the elapsed-proportional position first, then withTiming the remainder.
+  // snakeProgress drives 0→1 across the current segment; X/Y are derived on the
+  // UI thread — a single animation eliminates the axis-drift and step-boundary
+  // pauses that came from animating X and Y independently.
   useEffect(() => {
     if (visualizationMode !== 'snake') return;
 
     if (runState === 'paused' || runState === 'idle') {
-      cancelAnimation(snakeDotX);
-      cancelAnimation(snakeDotY);
+      cancelAnimation(snakeProgress);
       return;
     }
     if (runState !== 'running' || !currentStep) return;
@@ -199,12 +209,18 @@ export function TrainingRunScreen() {
 
     const total     = currentStep.durationSeconds;
     const remaining = timerTimeLeftRef.current;
-    const progress  = total > 0 ? (total - remaining) / total : 0;
+    const elapsed   = total - remaining;
+    const progress  = total > 0 ? elapsed / total : 0;
 
-    snakeDotX.value = wp.x + (wpNext.x - wp.x) * progress;
-    snakeDotY.value = wp.y + (wpNext.y - wp.y) * progress;
-    snakeDotX.value = withTiming(wpNext.x, { duration: Math.max(remaining * 1000, 16), easing: Easing.linear });
-    snakeDotY.value = withTiming(wpNext.y, { duration: Math.max(remaining * 1000, 16), easing: Easing.linear });
+    snakeFromX.value    = wp.x;
+    snakeFromY.value    = wp.y;
+    snakeToX.value      = wpNext.x;
+    snakeToY.value      = wpNext.y;
+    snakeProgress.value = progress;
+    snakeProgress.value = withTiming(1, {
+      duration: Math.max(remaining * 1000, 16),
+      easing: Easing.linear,
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, runState, visualizationMode]);
 
@@ -339,8 +355,7 @@ export function TrainingRunScreen() {
   function handlePause() {
     stopInterval();
     cancelAnimation(breathScale);
-    cancelAnimation(snakeDotX);
-    cancelAnimation(snakeDotY);
+    cancelAnimation(snakeProgress);
     setRunState('paused');
   }
 
@@ -351,8 +366,7 @@ export function TrainingRunScreen() {
   function handleStop() {
     stopInterval();
     cancelAnimation(breathScale);
-    cancelAnimation(snakeDotX);
-    cancelAnimation(snakeDotY);
+    cancelAnimation(snakeProgress);
     finishRun(false);
     router.back();
   }

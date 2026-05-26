@@ -2,8 +2,8 @@
   "expo": {
     "name": "Deeply",
     "slug": "deeply-mobile",
-    "version": "1.0.7",
-    "buildNumber": "7",
+    "version": "1.0.8",
+    "buildNumber": "8",
     "scheme": "deeply",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
