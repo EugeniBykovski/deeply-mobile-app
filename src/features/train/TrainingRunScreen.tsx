@@ -9,6 +9,7 @@ import Animated, {
   Easing,
   cancelAnimation,
   interpolateColor,
+  runOnUI,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -191,9 +192,10 @@ export function TrainingRunScreen() {
   }, [stepIndex, runState, visualizationMode]);
 
   // ─── Snake dot animation ──────────────────────────────────────────────────────
-  // snakeProgress drives 0→1 across the current segment; X/Y are derived on the
-  // UI thread — a single animation eliminates the axis-drift and step-boundary
-  // pauses that came from animating X and Y independently.
+  // snakeProgress drives 0→1 per segment; from/to endpoints are updated on the
+  // UI thread atomically via runOnUI so no frame can ever see partial state
+  // (new endpoints + old progress, or old endpoints + new progress).  That race
+  // was the root cause of the jump visible in TestFlight but not Expo dev.
   useEffect(() => {
     if (visualizationMode !== 'snake') return;
 
@@ -207,20 +209,29 @@ export function TrainingRunScreen() {
     const wpNext = snakeWaypoints[stepIndex + 1];
     if (!wp || !wpNext) return;
 
-    const total     = currentStep.durationSeconds;
-    const remaining = timerTimeLeftRef.current;
-    const elapsed   = total - remaining;
-    const progress  = total > 0 ? elapsed / total : 0;
+    const total        = currentStep.durationSeconds;
+    const remaining    = timerTimeLeftRef.current;
+    const elapsed      = total - remaining;
+    const fromProgress = total > 0 ? elapsed / total : 0;
+    const duration     = Math.max(remaining * 1000, 16);
 
-    snakeFromX.value    = wp.x;
-    snakeFromY.value    = wp.y;
-    snakeToX.value      = wpNext.x;
-    snakeToY.value      = wpNext.y;
-    snakeProgress.value = progress;
-    snakeProgress.value = withTiming(1, {
-      duration: Math.max(remaining * 1000, 16),
-      easing: Easing.linear,
-    });
+    // Capture all primitives so they're safe to read inside the worklet
+    const fromX = wp.x;
+    const fromY = wp.y;
+    const toX   = wpNext.x;
+    const toY   = wpNext.y;
+
+    // All six writes happen in one UI-thread worklet — atomically before the
+    // next animation frame evaluates useDerivedValue for snakeDotX/Y.
+    runOnUI(() => {
+      'worklet';
+      snakeFromX.value    = fromX;
+      snakeFromY.value    = fromY;
+      snakeToX.value      = toX;
+      snakeToY.value      = toY;
+      snakeProgress.value = fromProgress;
+      snakeProgress.value = withTiming(1, { duration, easing: Easing.linear });
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, runState, visualizationMode]);
 

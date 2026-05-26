@@ -34,8 +34,7 @@ export function DiveSessionScreen() {
     sessionState,
     sessionOutcome,
     holdSeconds,
-    currentDepth,
-    meterProgress,
+    depthMeters,
     maxReached,
     saving,
     handlePressIn,
@@ -87,8 +86,7 @@ export function DiveSessionScreen() {
           <>
             <DiveLane
               maxDepthMeters={maxDepthMeters}
-              currentDepth={currentDepth}
-              meterProgress={meterProgress}
+              depthMeters={depthMeters}
               isHolding={isHolding}
               statusLabel={statusLabel}
             />

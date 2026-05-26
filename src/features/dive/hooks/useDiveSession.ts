@@ -17,8 +17,7 @@ export interface DiveSessionReturn {
   sessionState: SessionState;
   sessionOutcome: SessionOutcome | null;
   holdSeconds: number;
-  currentDepth: number;
-  meterProgress: number; // 0..1 within the current meter — drives the hold progress bar
+  depthMeters: number; // single float source-of-truth (0..maxDepthMeters)
   maxReached: number;
   saving: boolean;
   handlePressIn: () => void;
@@ -45,8 +44,7 @@ export function useDiveSession({
   const [sessionState,   setSessionState]   = useState<SessionState>("idle");
   const [sessionOutcome, setSessionOutcome] = useState<SessionOutcome | null>(null);
   const [holdSeconds,    setHoldSeconds]    = useState(0);
-  const [currentDepth,   setCurrentDepth]   = useState(0);
-  const [meterProgress,  setMeterProgress]  = useState(0);
+  const [depthMeters,    setDepthMeters]    = useState(0);
   const [maxReached,     setMaxReached]     = useState(0);
   const [saving,         setSaving]         = useState(false);
 
@@ -83,10 +81,9 @@ export function useDiveSession({
     }
   }
 
-  // Each tick advances depthAccumRef by descentPerTick. currentDepth only
-  // updates when the integer-meter floor changes, giving the discrete step-by-step
-  // jumps. meterProgress (0..1) shows fractional progress within the current meter
-  // so the UI can display a fill bar that communicates "keep holding".
+  // Each tick advances depthAccumRef by descentPerTick. We expose a single
+  // depthMeters float so the display layer can derive m/cm with a single rounding
+  // operation instead of two separate integer+fraction state values.
   function startDescent() {
     stopDepthInterval();
     depthIntervalRef.current = setInterval(() => {
@@ -94,13 +91,9 @@ export function useDiveSession({
         depthAccumRef.current + descentPerTick,
         maxDepthMeters,
       );
-      const floored = Math.floor(depthAccumRef.current);
-      const frac    = depthAccumRef.current >= maxDepthMeters
-        ? 1
-        : depthAccumRef.current - floored;
+      setDepthMeters(depthAccumRef.current);
 
-      setCurrentDepth(floored);
-      setMeterProgress(frac);
+      const floored = Math.floor(depthAccumRef.current);
       setMaxReached((prev) => {
         const next = Math.max(prev, floored);
         maxReachedRef.current = next;
@@ -116,10 +109,9 @@ export function useDiveSession({
 
   function startAscent() {
     stopDepthInterval();
-    setMeterProgress(0);
     depthIntervalRef.current = setInterval(() => {
       depthAccumRef.current = Math.max(depthAccumRef.current - ascentPerTick, 0);
-      setCurrentDepth(Math.floor(depthAccumRef.current));
+      setDepthMeters(depthAccumRef.current);
       if (depthAccumRef.current <= 0) {
         depthAccumRef.current = 0;
         stopDepthInterval();
@@ -130,8 +122,7 @@ export function useDiveSession({
 
   useEffect(() => {
     if (sessionState === "idle" || sessionState === "done") {
-      setCurrentDepth(0);
-      setMeterProgress(0);
+      setDepthMeters(0);
     }
   }, [sessionState]);
 
@@ -210,8 +201,7 @@ export function useDiveSession({
     sessionState,
     sessionOutcome,
     holdSeconds,
-    currentDepth,
-    meterProgress,
+    depthMeters,
     maxReached,
     saving,
     handlePressIn,

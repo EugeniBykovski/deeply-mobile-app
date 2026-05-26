@@ -11,16 +11,14 @@ import { LANE_HEIGHT, DIVER_SIZE, ACCENT_COLOR, TICK_MS } from '../diveSession.c
 
 interface DiveLaneProps {
   maxDepthMeters: number;
-  currentDepth: number;
-  meterProgress: number; // 0..1 fractional within the current metre
+  depthMeters: number; // single float source-of-truth (0..maxDepthMeters)
   isHolding: boolean;
   statusLabel: string;
 }
 
 export const DiveLane = memo(function DiveLane({
   maxDepthMeters,
-  currentDepth,
-  meterProgress,
+  depthMeters,
   isHolding,
   statusLabel,
 }: DiveLaneProps) {
@@ -30,20 +28,24 @@ export const DiveLane = memo(function DiveLane({
     return markers;
   }, [maxDepthMeters]);
 
-  const metres = currentDepth;
-  const centimetres = Math.min(99, Math.floor(meterProgress * 100));
+  // Derive display values from a single float: round to nearest cm, then split.
+  // Math.round avoids the floor-boundary jitter where 0.999 m stays as "99 cm"
+  // instead of rolling over to "1 m 00 cm".
+  const maxDepthCm  = maxDepthMeters * 100;
+  const totalCm     = Math.min(Math.round(depthMeters * 100), maxDepthCm);
+  const metres      = Math.floor(totalCm / 100);
+  const centimetres = totalCm % 100;
 
-  // Smooth diver Y — animates between ticks so movement appears continuous
+  // Smooth diver Y — single depthMeters dep, animates between ticks
   const diverY = useSharedValue(0);
   useEffect(() => {
-    const fullDepth = currentDepth + meterProgress;
     const target = maxDepthMeters > 0
-      ? (fullDepth / maxDepthMeters) * (LANE_HEIGHT - DIVER_SIZE)
+      ? (depthMeters / maxDepthMeters) * (LANE_HEIGHT - DIVER_SIZE)
       : 0;
     diverY.value = withTiming(target, { duration: TICK_MS, easing: Easing.linear });
   // diverY identity is stable — not a dep
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDepth, meterProgress, maxDepthMeters]);
+  }, [depthMeters, maxDepthMeters]);
 
   // Fade instruction label between states
   const labelOpacity = useSharedValue(0.38);
@@ -62,7 +64,7 @@ export const DiveLane = memo(function DiveLane({
 
   return (
     <>
-      {/* Depth counter: "1 m 4 cm" */}
+      {/* Depth counter: "1 m 04 cm" */}
       <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
           <AppText
@@ -78,7 +80,7 @@ export const DiveLane = memo(function DiveLane({
             weight="bold"
             style={{ fontSize: 54, lineHeight: 60, color: 'rgba(255,255,255,0.72)' }}
           >
-            {centimetres}
+            {String(centimetres).padStart(2, '0')}
           </AppText>
           <AppText style={{ color: 'rgba(255,255,255,0.35)', fontSize: 18 }}>
             cm
