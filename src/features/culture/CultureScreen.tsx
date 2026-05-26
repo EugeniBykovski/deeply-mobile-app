@@ -17,10 +17,10 @@ import { ErrorView } from '@/shared/components/ErrorView';
 import { SkeletonArticleCard } from '@/shared/components/Skeleton';
 import { EmptyView } from '@/shared/components/EmptyView';
 import { AppText } from '@/shared/components/AppText';
-import { LiIcon } from '@/shared/components/LiIcon';
 import { PageTopBar } from '@/shared/components/PageTopBar';
 
 import { cultureService } from '@/api/services/culture.service';
+import { getCultureCover } from './cultureCovers';
 import { useLang } from '@/hooks/useLang';
 import type { CultureSection, CultureArticleListItem } from '@/api/types';
 import { colors } from '@/theme';
@@ -82,24 +82,11 @@ function FilterChip({
   );
 }
 
-// ─── Cover images for article cards without a remote URL ─────────────────────
-
-const FALLBACK_COVERS = [
-  require('../../../assets/dive1.jpg.webp') as ReturnType<typeof require>,
-  require('../../../assets/dive2.jpg.webp') as ReturnType<typeof require>,
-];
-
 // ─── Article card ─────────────────────────────────────────────────────────────
 
-function ArticleCard({
-  article,
-  coverIndex,
-}: {
-  article: CultureArticleListItem;
-  coverIndex: number;
-}) {
+function ArticleCard({ article }: { article: CultureArticleListItem }) {
   const { t } = useTranslation('tabs');
-  const fallbackCover = FALLBACK_COVERS[coverIndex % FALLBACK_COVERS.length];
+  const fallbackCover = getCultureCover(article.slug);
 
   return (
     <Pressable
@@ -248,8 +235,8 @@ export function CultureScreen() {
             {articles.length === 0 ? (
               <EmptyView message={t('culture_empty')} />
             ) : (
-              articles.map((article, index) => (
-                <ArticleCard key={article.id} article={article} coverIndex={index} />
+              articles.map((article) => (
+                <ArticleCard key={article.id} article={article} />
               ))
             )}
           </ScrollView>

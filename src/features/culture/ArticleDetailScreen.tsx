@@ -3,10 +3,12 @@ import {
   ScrollView,
   View,
   Image,
+  ImageBackground,
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -16,10 +18,9 @@ import { ErrorView } from '@/shared/components/ErrorView';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { cultureService } from '@/api/services/culture.service';
+import { getCultureCover } from './cultureCovers';
 import { useLang } from '@/hooks/useLang';
 import { colors } from '@/theme';
-
-const PLACEHOLDER_COLOR = '#122628';
 
 function useArticle(slug: string) {
   const lang = useLang();
@@ -72,26 +73,28 @@ export function ArticleDetailScreen() {
     <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
       <StatusBar style="light" />
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Cover image */}
-        {article.coverImageUrl ? (
-          <Image
-            source={{ uri: article.coverImageUrl }}
-            style={{ width: '100%', height: 240 }}
-            resizeMode="cover"
+        {/* Hero cover */}
+        <View style={{ width: '100%', height: 280 }}>
+          {article.coverImageUrl ? (
+            <Image
+              source={{ uri: article.coverImageUrl }}
+              style={{ width: '100%', height: 280 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <ImageBackground
+              source={getCultureCover(article.slug ?? '')}
+              style={{ width: '100%', height: 280 }}
+              resizeMode="cover"
+            >
+              <View style={{ flex: 1, backgroundColor: 'rgba(11,28,40,0.25)' }} />
+            </ImageBackground>
+          )}
+          <LinearGradient
+            colors={['transparent', 'rgba(11,28,40,0.85)']}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 }}
           />
-        ) : (
-          <View
-            style={{
-              width: '100%',
-              height: 200,
-              backgroundColor: PLACEHOLDER_COLOR,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <LiIcon name="books-2" size={48} color={colors.inkMuted} />
-          </View>
-        )}
+        </View>
 
         {/* Back button — floats over image */}
         <Pressable
