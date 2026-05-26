@@ -63,7 +63,9 @@ export function ProgramCard({ block }: ProgramCardProps) {
         </View>
 
         <AppText weight="semibold" numberOfLines={2} style={{ marginBottom: 6 }}>
-          {block.title}
+          {isPrivate
+            ? t('train_block_private_title', { defaultValue: block.title })
+            : t(`train_block_${block.key.toLowerCase()}`, { defaultValue: block.title })}
         </AppText>
 
         {isPrivate ? (

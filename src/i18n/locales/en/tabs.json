@@ -126,5 +126,16 @@
   "results_delete": "Delete",
   "results_delete_all": "Delete All",
   "results_delete_failed": "Delete failed",
-  "results_delete_failed_body": "Could not delete this item. Please try again."
+  "results_delete_failed_body": "Could not delete this item. Please try again.",
+
+  "train_block_beginner": "Beginner Training",
+  "train_block_intermediate": "Intermediate Training",
+  "train_block_pro": "Pro Training",
+  "train_block_square": "Square Breathing",
+  "train_block_calming": "Calming Breathing",
+  "train_block_dynamic": "Dynamic Training",
+  "train_block_static": "Static Training",
+  "train_block_warm_up": "Warm-Up",
+  "train_block_private_title": "My Training",
+  "train_block_private_subtitle": "Create and run your own custom breathing sessions"
 }

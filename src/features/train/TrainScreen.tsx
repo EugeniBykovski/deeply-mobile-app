@@ -90,9 +90,11 @@ export function TrainScreen() {
                     <LiIcon name="user-4" size={20} color={colors.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <AppText weight="semibold">{privateBlock.title}</AppText>
+                    <AppText weight="semibold">
+                      {t('train_block_private_title', { defaultValue: privateBlock.title })}
+                    </AppText>
                     <AppText variant="caption" secondary numberOfLines={1}>
-                      {privateBlock.description}
+                      {t('train_block_private_subtitle', { defaultValue: privateBlock.description })}
                     </AppText>
                   </View>
                   <LiIcon name="arrow-right" size={16} color={colors.accent} />

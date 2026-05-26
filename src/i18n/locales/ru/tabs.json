@@ -126,5 +126,16 @@
   "results_delete": "Удалить",
   "results_delete_all": "Удалить всё",
   "results_delete_failed": "Ошибка удаления",
-  "results_delete_failed_body": "Не удалось удалить запись. Попробуйте ещё раз."
+  "results_delete_failed_body": "Не удалось удалить запись. Попробуйте ещё раз.",
+
+  "train_block_beginner": "Тренировка для начинающих",
+  "train_block_intermediate": "Средний уровень",
+  "train_block_pro": "Продвинутый уровень",
+  "train_block_square": "Квадратное дыхание",
+  "train_block_calming": "Успокаивающее дыхание",
+  "train_block_dynamic": "Динамическая тренировка",
+  "train_block_static": "Статическая тренировка",
+  "train_block_warm_up": "Разминка",
+  "train_block_private_title": "Мои тренировки",
+  "train_block_private_subtitle": "Создавайте и запускайте свои дыхательные сессии"
 }
