@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -120,6 +121,14 @@ export function TrainingRunScreen() {
     borderColor: animatedPhaseColor.value,
   }));
 
+  // Opacity gate for wave-mode labels (time + phase name). Crossfades in sync
+  // with the WaveVisualization container so text color never hard-snaps while
+  // the labels are visible.
+  const waveLabelOpacity = useSharedValue(1);
+  const animatedWaveLabelStyle = useAnimatedStyle(() => ({
+    opacity: waveLabelOpacity.value,
+  }));
+
   // ─── Timer mode animation ─────────────────────────────────────────────────────
 
   const timerTimeLeftRef = useRef(timeLeft);
@@ -162,6 +171,19 @@ export function TrainingRunScreen() {
     if (nextPhaseIdx !== -1) {
       phaseProgress.value = withTiming(nextPhaseIdx, { duration: 350, easing: Easing.out(Easing.quad) });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIndex, runState, visualizationMode]);
+
+  // Crossfade wave-mode labels in sync with the wave container dimming.
+  // Timing matches WaveVisualization's DIM_DURATION (120 ms) + FADE_DURATION
+  // (220 ms) so labels and wave opacity travel together, hiding the JS-thread
+  // phaseColor string snap while the labels are invisible.
+  useEffect(() => {
+    if (runState !== 'running' || visualizationMode !== 'wave') return;
+    waveLabelOpacity.value = withSequence(
+      withTiming(0, { duration: 120, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: 220, easing: Easing.in(Easing.quad) }),
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, runState, visualizationMode]);
 
@@ -451,14 +473,17 @@ export function TrainingRunScreen() {
                     {t('train_run_tap_to_start')}
                   </AppText>
                 ) : (
-                  <View style={{ alignItems: 'center', marginTop: 12 }}>
+                  // Animated.View wrapper crossfades opacity in sync with the
+                  // wave container — hides the instant phaseColor string swap
+                  // so time + label text appear to transition with the wave.
+                  <Animated.View style={[{ alignItems: 'center', marginTop: 12 }, animatedWaveLabelStyle]}>
                     <AppText weight="bold" style={{ fontSize: 42, color: phaseColor, lineHeight: 46 }}>
                       {formatTime(timeLeft)}
                     </AppText>
                     <AppText weight="semibold" style={{ color: phaseColor, marginTop: 2, letterSpacing: 0.5 }}>
                       {phaseLabel[currentStep?.phase ?? ''] ?? currentStep?.phase}
                     </AppText>
-                  </View>
+                  </Animated.View>
                 )}
               </View>
             )}

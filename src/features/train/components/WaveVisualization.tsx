@@ -4,6 +4,7 @@ import Animated, {
   useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
+  withSequence,
   withTiming,
   type DerivedValue,
   type SharedValue,
@@ -27,6 +28,14 @@ const PHASE_SPEED: Record<string, number> = {
   REST:   0.6,
 };
 
+// ─── Crossfade timings ────────────────────────────────────────────────────────
+// The dim and amplitude/speed transitions fire SIMULTANEOUSLY so there is never
+// a "frozen dim" pause between them (previous callback-chain approach had a
+// 130 ms dead zone that was visible as a snap on tight frame budgets).
+const DIM_DURATION  = 120; // ms — how long opacity drops to DIM_TARGET
+const DIM_TARGET    = 0.3; // opacity floor during crossfade
+const FADE_DURATION = 220; // ms — how long opacity returns to 1
+
 interface WaveDotProps {
   index: number;
   time: SharedValue<number>;
@@ -34,11 +43,10 @@ interface WaveDotProps {
   color: DerivedValue<string>;
 }
 
-// React.memo is critical: WaveDot props are all stable SharedValue references
-// whose VALUES change on the UI thread. Without memo, every elapsed/timeLeft
-// state update in TrainingRunScreen re-renders all 32 WaveDots, causing
-// Reanimated to re-register each useAnimatedStyle worklet on the UI thread.
-// That re-registration creates a ~1 frame gap with no style → visible snap.
+// React.memo prevents re-registration of the 32 useAnimatedStyle worklets on
+// every elapsed/timeLeft tick in TrainingRunScreen. All props are stable
+// SharedValue references — their .value changes on the UI thread independently
+// of React renders, so memo-equality is always true during running steps.
 const WaveDot = React.memo(function WaveDot({ index, time, amplitude, color }: WaveDotProps) {
   const style = useAnimatedStyle(() => {
     'worklet';
@@ -64,16 +72,12 @@ interface WaveVisualizationProps {
 }
 
 export function WaveVisualization({ phase, isRunning, color }: WaveVisualizationProps) {
-  const time      = useSharedValue(0);
-  const amplitude = useSharedValue(PHASE_AMPLITUDE[phase] ?? 5);
-  const speed     = useSharedValue(PHASE_SPEED[phase] ?? 0.6);
-  const running   = useSharedValue(isRunning ? 1 : 0);
-  // Container opacity used for the crossfade on phase change — never touches
-  // individual dot worklets so no re-registration occurs.
+  const time        = useSharedValue(0);
+  const amplitude   = useSharedValue(PHASE_AMPLITUDE[phase] ?? 5);
+  const speed       = useSharedValue(PHASE_SPEED[phase] ?? 0.6);
+  const running     = useSharedValue(isRunning ? 1 : 0);
   const waveOpacity = useSharedValue(1);
 
-  // Track whether this is the initial mount so we skip the crossfade on the
-  // very first phase value (no previous state to transition from).
   const isFirstPhase = useRef(true);
 
   useEffect(() => {
@@ -82,43 +86,36 @@ export function WaveVisualization({ phase, isRunning, color }: WaveVisualization
   }, [isRunning]);
 
   useEffect(() => {
-    // Capture target values as primitives so they're safe inside the worklet
-    // closure (worklets cannot close over arbitrary JS objects).
     const targetAmplitude = PHASE_AMPLITUDE[phase] ?? 5;
     const targetSpeed     = PHASE_SPEED[phase] ?? 0.6;
 
     if (isFirstPhase.current) {
       isFirstPhase.current = false;
-      // Set immediately on first mount — no previous state to crossfade from.
       amplitude.value = targetAmplitude;
       speed.value     = targetSpeed;
       return;
     }
 
-    // Phase boundary crossfade:
-    //   0 – 130 ms  : container dims to 40 % opacity
-    //   130 ms      : amplitude + speed start transitioning (UI thread)
-    //   130 – 310 ms: container brightens back to full while amplitude moves
+    // All three animations start at the same time:
     //
-    // The dim hides the single frame where dots may snap from old→new sine
-    // values before withTiming has had a chance to ease the amplitude.
-    waveOpacity.value = withTiming(
-      0.35,
-      { duration: 130, easing: Easing.out(Easing.quad) },
-      (finished) => {
-        'worklet';
-        if (!finished) return;
-        amplitude.value = withTiming(targetAmplitude, {
-          duration: 520,
-          easing: Easing.inOut(Easing.quad),
-        });
-        speed.value = withTiming(targetSpeed, { duration: 650 });
-        waveOpacity.value = withTiming(1, {
-          duration: 200,
-          easing: Easing.in(Easing.quad),
-        });
-      },
+    //   waveOpacity: 1 → DIM_TARGET (DIM_DURATION ms)
+    //                    → 1          (FADE_DURATION ms)
+    //
+    //   amplitude:   current → target (520 ms, eased)
+    //   speed:       current → target (650 ms, eased)
+    //
+    // The dim masks the first frame of the amplitude jump. By the time opacity
+    // returns to 1 (~340 ms), amplitude is already mid-transition and the wave
+    // looks smooth. There is NEVER a pause between dim and transition start.
+    waveOpacity.value = withSequence(
+      withTiming(DIM_TARGET, { duration: DIM_DURATION, easing: Easing.out(Easing.quad) }),
+      withTiming(1,          { duration: FADE_DURATION, easing: Easing.in(Easing.quad) }),
     );
+    amplitude.value = withTiming(targetAmplitude, {
+      duration: 520,
+      easing: Easing.inOut(Easing.quad),
+    });
+    speed.value = withTiming(targetSpeed, { duration: 650 });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
