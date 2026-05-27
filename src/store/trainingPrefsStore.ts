@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import * as FileSystem from 'expo-file-system';
 
-export type VisualizationMode = 'timer' | 'snake';
+export type VisualizationMode = 'timer' | 'wave';
 
 // ─── FileSystem storage (same pattern as onboardingStore) ─────────────────────
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Pressable, View, useWindowDimensions } from 'react-native';
+import { Dimensions, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,7 +9,6 @@ import Animated, {
   Easing,
   cancelAnimation,
   interpolateColor,
-  runOnUI,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -23,10 +22,10 @@ import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
 import { PHASE_COLORS, PHASE_SCALE_FROM, PHASE_SCALE_TO } from '@/constants/phase';
 import { formatTime } from '@/utils/format';
-import { buildSnakePath } from '@/utils/snakePath';
 import { useTrainingPrefsStore } from '@/store/trainingPrefsStore';
 import { useTrainingSessionStore } from '@/store/trainingSessionStore';
-import { SnakeVisualization, SNAKE_HEIGHT } from './components/SnakeVisualization';
+import { WaveVisualization } from './components/WaveVisualization';
+import { CountdownOverlay } from './components/CountdownOverlay';
 import { ModeToggle } from './components/ModeToggle';
 import { Co2RatingPicker } from './components/Co2RatingPicker';
 
@@ -34,21 +33,18 @@ import { Co2RatingPicker } from './components/Co2RatingPicker';
 
 const CIRCLE_SIZE = Math.min(Dimensions.get('window').width - 80, 220);
 
-// Phase order and color table used for UI-thread color interpolation.
-// Declared outside the component so they are never reallocated on re-render.
 const PHASE_ORDER = ['INHALE', 'HOLD', 'EXHALE', 'REST'] as const;
 const PHASE_COLOR_VALUES = PHASE_ORDER.map(
   (p) => PHASE_COLORS[p] ?? '#3BBFAD',
 ) as [string, string, string, string];
 
-type RunState = 'idle' | 'running' | 'paused' | 'done';
+type RunState = 'idle' | 'countdown' | 'running' | 'paused' | 'done';
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function TrainingRunScreen() {
   const { t } = useTranslation('tabs');
   const queryClient = useQueryClient();
-  const { width: screenWidth } = useWindowDimensions();
 
   const params = useLocalSearchParams<{
     id: string;
@@ -97,38 +93,13 @@ export function TrainingRunScreen() {
     REST:   t('train_phase_rest'),
   }), [t]);
 
-  // ─── Snake waypoints ─────────────────────────────────────────────────────────
-
-  const snakeContainerWidth = screenWidth - 48;
-  const snakeWaypoints = useMemo(
-    () => buildSnakePath(steps.length + 1, snakeContainerWidth, SNAKE_HEIGHT),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [steps.length, snakeContainerWidth],
-  );
-
   // ─── Animated values ─────────────────────────────────────────────────────────
 
   const breathScale   = useSharedValue(PHASE_SCALE_FROM[steps[0]?.phase ?? 'REST'] ?? 0.55);
   const circleOpacity = useSharedValue(0.18);
 
-  // Numeric index that animates between 0-3 so we can interpolate phase colors
-  // entirely on the UI thread — no JS-thread color string swaps between phases.
   const phaseProgress = useSharedValue(
     PHASE_ORDER.indexOf((steps[0]?.phase ?? 'REST') as any),
-  );
-
-  // Single progress value + UI-thread derived X/Y — no timing drift between axes
-  const snakeFromX    = useSharedValue(snakeWaypoints[0]?.x ?? 0);
-  const snakeFromY    = useSharedValue(snakeWaypoints[0]?.y ?? 0);
-  const snakeToX      = useSharedValue(snakeWaypoints[1]?.x ?? snakeWaypoints[0]?.x ?? 0);
-  const snakeToY      = useSharedValue(snakeWaypoints[1]?.y ?? snakeWaypoints[0]?.y ?? 0);
-  const snakeProgress = useSharedValue(0);
-
-  const snakeDotX = useDerivedValue(() =>
-    snakeFromX.value + (snakeToX.value - snakeFromX.value) * snakeProgress.value,
-  );
-  const snakeDotY = useDerivedValue(() =>
-    snakeFromY.value + (snakeToY.value - snakeFromY.value) * snakeProgress.value,
   );
 
   const animatedPhaseColor = useDerivedValue(() =>
@@ -150,14 +121,12 @@ export function TrainingRunScreen() {
   }));
 
   // ─── Timer mode animation ─────────────────────────────────────────────────────
-  // Mirror timeLeft into a ref so the animation effect can read the current
-  // remaining time without having it as a dependency (which would restart
-  // withTiming every second, causing 1-second choppiness in production).
+
   const timerTimeLeftRef = useRef(timeLeft);
   useEffect(() => { timerTimeLeftRef.current = timeLeft; }, [timeLeft]);
 
   useEffect(() => {
-    if (runState === 'paused' || runState === 'idle') {
+    if (runState === 'paused' || runState === 'idle' || runState === 'countdown') {
       cancelAnimation(breathScale);
       return;
     }
@@ -170,9 +139,6 @@ export function TrainingRunScreen() {
     const from      = PHASE_SCALE_FROM[currentStep.phase] ?? 0.55;
     const to        = PHASE_SCALE_TO[currentStep.phase]   ?? 0.55;
 
-    // Snap to the correct mid-step position, then animate to the final target
-    // over the FULL remaining duration — one smooth animation per step instead
-    // of restarting every second.
     breathScale.value = from + (to - from) * progress;
     breathScale.value = withTiming(to, {
       duration: Math.max(remaining * 1000, 16),
@@ -182,8 +148,6 @@ export function TrainingRunScreen() {
       currentStep.phase === 'HOLD' ? 0.28 : 0.18,
       { duration: 400 },
     );
-    // Animate phase color on the UI thread instead of swapping hex strings
-    // via a React state update — prevents the abrupt color snap between phases.
     const nextPhaseIdx = PHASE_ORDER.indexOf(currentStep.phase as any);
     if (nextPhaseIdx !== -1) {
       phaseProgress.value = withTiming(nextPhaseIdx, { duration: 350, easing: Easing.out(Easing.quad) });
@@ -191,47 +155,13 @@ export function TrainingRunScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, runState, visualizationMode]);
 
-  // ─── Snake dot animation ──────────────────────────────────────────────────────
-  // snakeProgress drives 0→1 per segment; from/to endpoints are updated on the
-  // UI thread atomically via runOnUI so no frame can ever see partial state
-  // (new endpoints + old progress, or old endpoints + new progress).  That race
-  // was the root cause of the jump visible in TestFlight but not Expo dev.
+  // Phase color also drives wave mode — update phaseProgress for wave too
   useEffect(() => {
-    if (visualizationMode !== 'snake') return;
-
-    if (runState === 'paused' || runState === 'idle') {
-      cancelAnimation(snakeProgress);
-      return;
+    if (runState !== 'running' || visualizationMode !== 'wave' || !currentStep) return;
+    const nextPhaseIdx = PHASE_ORDER.indexOf(currentStep.phase as any);
+    if (nextPhaseIdx !== -1) {
+      phaseProgress.value = withTiming(nextPhaseIdx, { duration: 350, easing: Easing.out(Easing.quad) });
     }
-    if (runState !== 'running' || !currentStep) return;
-
-    const wp     = snakeWaypoints[stepIndex];
-    const wpNext = snakeWaypoints[stepIndex + 1];
-    if (!wp || !wpNext) return;
-
-    const total        = currentStep.durationSeconds;
-    const remaining    = timerTimeLeftRef.current;
-    const elapsed      = total - remaining;
-    const fromProgress = total > 0 ? elapsed / total : 0;
-    const duration     = Math.max(remaining * 1000, 16);
-
-    // Capture all primitives so they're safe to read inside the worklet
-    const fromX = wp.x;
-    const fromY = wp.y;
-    const toX   = wpNext.x;
-    const toY   = wpNext.y;
-
-    // All six writes happen in one UI-thread worklet — atomically before the
-    // next animation frame evaluates useDerivedValue for snakeDotX/Y.
-    runOnUI(() => {
-      'worklet';
-      snakeFromX.value    = fromX;
-      snakeFromY.value    = fromY;
-      snakeToX.value      = toX;
-      snakeToY.value      = toY;
-      snakeProgress.value = fromProgress;
-      snakeProgress.value = withTiming(1, { duration, easing: Easing.linear });
-    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIndex, runState, visualizationMode]);
 
@@ -279,7 +209,6 @@ export function TrainingRunScreen() {
             totalSeconds: elapsedRef.current > 0 ? elapsedRef.current : undefined,
             ...(metrics ? { metrics } : {}),
           });
-          // Sync local ID to the real backend run ID so deletion works
           if (trainingId) updateRunId(localId, runIdRef.current);
         } else if (trainingId) {
           const saved = await trainService.saveRun({ templateId: trainingId, completed, totalSeconds: elapsedRef.current });
@@ -346,13 +275,10 @@ export function TrainingRunScreen() {
 
   // ─── Controls ─────────────────────────────────────────────────────────────────
 
-  async function handleStart() {
-    if (steps.length === 0) return;
+  async function beginSession() {
     setRunState('running');
-
     if (trainingId) {
       setInProgress(trainingId);
-      // Backend run creation is fire-and-forget — animation is never blocked by it.
       trainService
         .saveRun({ templateId: trainingId, completed: false })
         .then((r) => {
@@ -363,10 +289,18 @@ export function TrainingRunScreen() {
     }
   }
 
+  function handleStart() {
+    if (steps.length === 0) return;
+    setRunState('countdown');
+  }
+
+  function handleCountdownDone() {
+    beginSession();
+  }
+
   function handlePause() {
     stopInterval();
     cancelAnimation(breathScale);
-    cancelAnimation(snakeProgress);
     setRunState('paused');
   }
 
@@ -377,7 +311,6 @@ export function TrainingRunScreen() {
   function handleStop() {
     stopInterval();
     cancelAnimation(breathScale);
-    cancelAnimation(snakeProgress);
     finishRun(false);
     router.back();
   }
@@ -391,11 +324,13 @@ export function TrainingRunScreen() {
 
   // ─── Derived ──────────────────────────────────────────────────────────────────
 
-  const isDone    = runState === 'done';
-  const isIdle    = runState === 'idle';
-  const isPaused  = runState === 'paused';
-  const progress  = steps.length > 0 ? (stepIndex + 1) / steps.length : 0;
-  const showRounds = totalRounds > 1;
+  const isDone       = runState === 'done';
+  const isIdle       = runState === 'idle';
+  const isPaused     = runState === 'paused';
+  const isCountdown  = runState === 'countdown';
+  const isRunning    = runState === 'running';
+  const progress     = steps.length > 0 ? (stepIndex + 1) / steps.length : 0;
+  const showRounds   = totalRounds > 1;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -469,14 +404,12 @@ export function TrainingRunScreen() {
               <View
                 style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE, alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}
               >
-                {/* Filled background — scale + opacity + color all driven by Reanimated */}
                 <Animated.View
                   style={[
                     { position: 'absolute', width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2 },
                     animatedCircleStyle,
                   ]}
                 />
-                {/* Border ring — color fades between phases on UI thread */}
                 <Animated.View
                   style={[
                     {
@@ -505,12 +438,10 @@ export function TrainingRunScreen() {
 
             ) : (
               <View style={{ width: '100%', marginBottom: 16 }}>
-                <SnakeVisualization
-                  steps={steps}
-                  stepIndex={stepIndex}
-                  waypoints={snakeWaypoints}
-                  dotX={snakeDotX}
-                  dotY={snakeDotY}
+                <WaveVisualization
+                  phase={currentStep?.phase ?? 'REST'}
+                  isRunning={isRunning}
+                  color={animatedPhaseColor}
                 />
                 {isIdle ? (
                   <AppText variant="caption" muted style={{ textAlign: 'center', marginTop: 12 }}>
@@ -529,7 +460,7 @@ export function TrainingRunScreen() {
               </View>
             )}
 
-            {!isIdle && (
+            {!isIdle && !isCountdown && (
               <View style={{ alignItems: 'center', marginBottom: 12 }}>
                 {showRounds && (
                   <AppText weight="semibold" style={{ color: phaseColor, marginBottom: 2, letterSpacing: 0.3 }}>
@@ -545,7 +476,7 @@ export function TrainingRunScreen() {
               </View>
             )}
 
-            {visualizationMode === 'timer' && (
+            {!isIdle && !isCountdown && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 280, marginBottom: 24 }}>
                 {steps.map((s, idx) => (
                   <View
@@ -554,7 +485,7 @@ export function TrainingRunScreen() {
                       width: 8, height: 8, borderRadius: 4,
                       backgroundColor:
                         idx < stepIndex ? PHASE_COLORS[s.phase] ?? colors.accent
-                        : idx === stepIndex && runState === 'running' ? phaseColor
+                        : idx === stepIndex && isRunning ? phaseColor
                         : colors.border,
                     }}
                   />
@@ -593,6 +524,11 @@ export function TrainingRunScreen() {
               {t('train_run_start')}
             </AppText>
           </Pressable>
+
+        ) : isCountdown ? (
+          <View style={{ flex: 1, paddingVertical: 18, alignItems: 'center' }}>
+            <AppText secondary>{t('train_run_ready')}</AppText>
+          </View>
 
         ) : isPaused ? (
           <>
@@ -644,6 +580,9 @@ export function TrainingRunScreen() {
           </>
         )}
       </View>
+
+      {/* Countdown overlay — rendered last so it sits on top */}
+      {isCountdown && <CountdownOverlay onDone={handleCountdownDone} />}
     </SafeAreaView>
   );
 }

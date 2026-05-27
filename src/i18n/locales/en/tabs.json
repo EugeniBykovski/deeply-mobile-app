@@ -53,6 +53,7 @@
   "train_run_pause": "Pause",
   "train_run_resume": "Resume",
   "train_run_start": "Start",
+  "train_run_go": "Go!",
 
   "dive_title": "Dive Challenges",
   "dive_empty": "No dive challenges yet.",

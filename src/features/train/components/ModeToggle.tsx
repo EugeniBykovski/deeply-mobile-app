@@ -22,7 +22,7 @@ export function ModeToggle({ mode, onChange }: ModeToggleProps) {
         alignSelf: 'center',
       }}
     >
-      {(['timer', 'snake'] as VisualizationMode[]).map((m) => {
+      {(['timer', 'wave'] as VisualizationMode[]).map((m) => {
         const selected = mode === m;
         return (
           <Pressable
@@ -41,7 +41,7 @@ export function ModeToggle({ mode, onChange }: ModeToggleProps) {
               weight={selected ? 'semibold' : 'medium'}
               style={{ color: selected ? colors.inkInverse : colors.inkMuted }}
             >
-              {m === 'timer' ? 'Timer' : 'Snake'}
+              {m === 'timer' ? 'Timer' : 'Wave'}
             </AppText>
           </Pressable>
         );
