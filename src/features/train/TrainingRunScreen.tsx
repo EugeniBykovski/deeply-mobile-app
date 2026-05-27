@@ -294,9 +294,12 @@ export function TrainingRunScreen() {
     setRunState('countdown');
   }
 
-  function handleCountdownDone() {
+  // useCallback keeps the reference stable so CountdownOverlay's useEffect
+  // deps don't change on unrelated TrainingRunScreen re-renders.
+  const handleCountdownDone = useCallback(() => {
     beginSession();
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handlePause() {
     stopInterval();
