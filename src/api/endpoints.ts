@@ -56,4 +56,12 @@ export const endpoints = {
     status: '/purchases/me',
     sync: '/purchases/sync',
   },
+
+  // Timer
+  timer: {
+    sessions: '/timer/sessions',
+    session: (id: string) => `/timer/sessions/${id}`,
+    attempts: (sessionId: string) => `/timer/sessions/${sessionId}/attempts`,
+    stats: '/timer/stats',
+  },
 } as const;

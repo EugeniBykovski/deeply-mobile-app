@@ -273,3 +273,86 @@ export interface DiveRunResponse {
   maxDepthMeters: number;
   completed: boolean;
 }
+
+// ─── Timer ────────────────────────────────────────────────────────────────────
+
+export type TimerMode = 'BREATH_HOLD' | 'DIVE';
+
+export interface CreateTimerAttemptPayload {
+  clientAttemptId: string;
+  startedAt: string;
+  finishedAt: string;
+  durationSeconds: number;
+  depthMeters?: number;
+  diveType?: string;
+  location?: string;
+  equalizationNotes?: string;
+  contractionsCount?: number;
+  comfortRating?: number;
+  notes?: string;
+}
+
+export interface CreateTimerSessionPayload {
+  mode: TimerMode;
+  notes?: string;
+  firstAttempt: CreateTimerAttemptPayload;
+}
+
+export interface TimerAttempt {
+  id: string;
+  sessionId: string;
+  attemptNumber: number;
+  startedAt: string;
+  finishedAt: string;
+  durationSeconds: number;
+  recoverySeconds: number | null;
+  depthMeters: number | null;
+  diveType: string | null;
+  location: string | null;
+  equalizationNotes: string | null;
+  contractionsCount: number | null;
+  comfortRating: number | null;
+  notes: string | null;
+}
+
+export interface CreateTimerSessionResponse {
+  sessionId: string;
+  attempt: TimerAttempt;
+}
+
+export interface TimerSessionListItem {
+  id: string;
+  mode: TimerMode;
+  notes: string | null;
+  createdAt: string;
+  attemptCount: number;
+  bestDurationSeconds: number | null;
+  averageDurationSeconds: number | null;
+}
+
+export interface TimerSessionListResponse {
+  items: TimerSessionListItem[];
+  nextCursor: string | null;
+}
+
+export interface TimerSessionDetail {
+  id: string;
+  mode: TimerMode;
+  notes: string | null;
+  createdAt: string;
+  attempts: TimerAttempt[];
+}
+
+export interface TimerModeStats {
+  attemptCount: number;
+  bestDurationSeconds: number;
+  longestDurationSeconds: number;
+  shortestDurationSeconds: number;
+  averageDurationSeconds: number;
+  totalDurationSeconds: number;
+}
+
+export interface TimerStatsResponse {
+  breathHold: TimerModeStats | null;
+  dive: TimerModeStats | null;
+}
