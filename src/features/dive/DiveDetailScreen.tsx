@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -10,6 +10,7 @@ import { ErrorView } from "@/shared/components/ErrorView";
 import { Skeleton } from "@/shared/components/Skeleton";
 import { AppText } from "@/shared/components/AppText";
 import { LiIcon } from "@/shared/components/LiIcon";
+import { LockedSheet } from "@/shared/components/LockedSheet";
 
 import { diveService } from "@/api/services/dive.service";
 import type { DiveTemplate } from "@/api/types";
@@ -202,6 +203,7 @@ function StatPill({
 export function DiveDetailScreen() {
   const { t } = useTranslation("tabs");
   const { slug, autoStart } = useLocalSearchParams<{ slug: string; autoStart?: string }>();
+  const [lockedVisible, setLockedVisible] = useState(false);
 
   const query = useDiveTemplate(slug ?? "");
   const template = query.data as DiveTemplate | undefined;
@@ -213,6 +215,10 @@ export function DiveDetailScreen() {
 
   function handleStartSession() {
     if (!template) return;
+    if (template.isLocked) {
+      setLockedVisible(true);
+      return;
+    }
     router.push({
       pathname: "/dive/session",
       params: {
@@ -222,12 +228,13 @@ export function DiveDetailScreen() {
         maxDepthMeters: String(template.maxDepthMeters),
         targetHoldSeconds: String(template.targetHoldSeconds ?? 120),
         profilePoints: JSON.stringify(template.profilePoints),
+        isPremium: template.isPremium ? "1" : "0",
       },
     } as any);
   }
 
   useEffect(() => {
-    if (autoStart === "1" && template && !didAutoStart.current) {
+    if (autoStart === "1" && template && !template.isLocked && !didAutoStart.current) {
       didAutoStart.current = true;
       handleStartSession();
     }
@@ -366,7 +373,9 @@ export function DiveDetailScreen() {
               onPress={handleStartSession}
               className="active:opacity-80"
               style={{
-                backgroundColor: diffColor,
+                backgroundColor: template.isLocked ? colors.surface : diffColor,
+                borderWidth: template.isLocked ? 1 : 0,
+                borderColor: colors.border,
                 borderRadius: 16,
                 paddingVertical: 18,
                 alignItems: "center",
@@ -375,14 +384,28 @@ export function DiveDetailScreen() {
                 gap: 10,
               }}
             >
-              <LiIcon name="water-drop-1" size={20} color="#fff" />
-              <AppText weight="bold" style={{ color: "#fff", fontSize: 16 }}>
-                {t("dive_start_session")}
+              <LiIcon
+                name={template.isLocked ? "lock" : "water-drop-1"}
+                size={20}
+                color={template.isLocked ? colors.warning : "#fff"}
+              />
+              <AppText
+                weight="bold"
+                style={{ color: template.isLocked ? colors.warning : "#fff", fontSize: 16 }}
+              >
+                {template.isLocked ? t("dive_locked_label") : t("dive_start_session")}
               </AppText>
             </Pressable>
           </View>
         </>
       )}
+
+      <LockedSheet
+        visible={lockedVisible}
+        onClose={() => setLockedVisible(false)}
+        title={t("dive_locked_title")}
+        body={t("dive_locked_body")}
+      />
     </SafeAreaView>
   );
 }

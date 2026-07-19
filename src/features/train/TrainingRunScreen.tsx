@@ -18,9 +18,12 @@ import Animated, {
 
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
+import { LockedSheet } from '@/shared/components/LockedSheet';
 import { trainService } from '@/api/services/train.service';
 import type { TrainingStep } from '@/api/types';
 import { colors } from '@/theme';
+import { useEntitlement } from '@/features/entitlement/useEntitlement';
+import { isPracticeLocked } from '@/features/entitlement/entitlement.types';
 import { PHASE_COLORS, PHASE_SCALE_FROM, PHASE_SCALE_TO } from '@/constants/phase';
 import { formatTime } from '@/utils/format';
 import { useTrainingPrefsStore } from '@/store/trainingPrefsStore';
@@ -56,7 +59,11 @@ export function TrainingRunScreen() {
     programSlug: string;
     repeats: string;
     saveCO2: string;
+    isPremium: string;
   }>();
+
+  const { hasFullAccess } = useEntitlement();
+  const isLocked = isPracticeLocked(params.isPremium === '1', hasFullAccess);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const steps: TrainingStep[] = useMemo(() => params.steps ? JSON.parse(params.steps) : [], [params.steps]);
@@ -358,6 +365,20 @@ export function TrainingRunScreen() {
   const showRounds   = totalRounds > 1;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
+
+  if (isLocked) {
+    return (
+      <SafeAreaView className="flex-1 bg-brand-bg" edges={['top', 'bottom']}>
+        <StatusBar style="light" />
+        <LockedSheet
+          visible
+          onClose={() => router.back()}
+          title={t('train_locked_title')}
+          body={t('train_locked_body')}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-brand-bg" edges={['top', 'bottom']}>

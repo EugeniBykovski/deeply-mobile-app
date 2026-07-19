@@ -222,7 +222,6 @@ export function ProgramTrainingsScreen() {
         onClose={() => setLockedSheetVisible(false)}
         title={t('train_locked_title')}
         body={t('train_locked_body')}
-        ctaLabel={t('train_locked_cta')}
       />
     </SafeAreaView>
   );

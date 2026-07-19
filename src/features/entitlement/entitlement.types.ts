@@ -16,3 +16,12 @@ export interface EntitlementSnapshot {
   trialEndsAt: string | null;
   trialDaysRemaining: number | null;
 }
+
+/**
+ * Centralized lock rule shared by every screen that can be reached to play
+ * a practice — list screens, detail screens, and the run/session screens
+ * themselves (the latter guard against deep links bypassing the former).
+ */
+export function isPracticeLocked(isPremium: boolean, hasFullAccess: boolean): boolean {
+  return isPremium && !hasFullAccess;
+}

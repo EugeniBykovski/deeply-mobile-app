@@ -216,7 +216,6 @@ export function DiveScreen() {
         onClose={() => setLockedVisible(false)}
         title={t('dive_locked_title')}
         body={t('dive_locked_body')}
-        ctaLabel={t('dive_locked_cta')}
       />
     </SafeAreaView>
   );

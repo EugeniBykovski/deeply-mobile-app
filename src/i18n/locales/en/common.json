@@ -27,5 +27,16 @@
   "manage_subscription": "Manage Subscription",
   "legal": "Legal",
   "terms_of_service": "Terms of Service",
-  "privacy_policy": "Privacy Policy"
+  "privacy_policy": "Privacy Policy",
+  "restore_purchases": "Restore Purchases",
+  "restore_purchases_none_found": "No active subscription found.",
+  "restore_purchases_failed": "Restore failed. Please try again.",
+  "trial_days_remaining_one": "{{count}} day left in your free trial",
+  "trial_days_remaining_other": "{{count}} days left in your free trial",
+  "period_week": "/ week",
+  "period_month": "/ month",
+  "period_2_months": "/ 2 months",
+  "period_3_months": "/ 3 months",
+  "period_6_months": "/ 6 months",
+  "period_year": "/ year"
 }

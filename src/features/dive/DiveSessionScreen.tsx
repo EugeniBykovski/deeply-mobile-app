@@ -11,6 +11,9 @@ import { DiveTopBar } from "./components/DiveTopBar";
 import { DiveLane } from "./components/DiveLane";
 import { DiveControls } from "./components/DiveControls";
 import { DiveResult } from "./components/DiveResult";
+import { LockedSheet } from "@/shared/components/LockedSheet";
+import { useEntitlement } from "@/features/entitlement/useEntitlement";
+import { isPracticeLocked } from "@/features/entitlement/entitlement.types";
 
 export function DiveSessionScreen() {
   const { t } = useTranslation("tabs");
@@ -21,6 +24,7 @@ export function DiveSessionScreen() {
     title: string;
     maxDepthMeters: string;
     targetHoldSeconds: string;
+    isPremium: string;
   }>();
 
   const templateId        = params.id ?? "";
@@ -29,6 +33,9 @@ export function DiveSessionScreen() {
   const maxDepthMeters    = Math.max(Number(params.maxDepthMeters    || "30"),  1);
   // Use || instead of ?? so "0" falls back to 120
   const targetHoldSeconds = Math.max(Number(params.targetHoldSeconds || "120"), 10);
+
+  const { hasFullAccess } = useEntitlement();
+  const isLocked = isPracticeLocked(params.isPremium === "1", hasFullAccess);
 
   const {
     sessionState,
@@ -53,6 +60,22 @@ export function DiveSessionScreen() {
     : isSurfacing
       ? t("dive_session_surfacing")
       : t("dive_session_ready");
+
+  if (isLocked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: BG_COLOR }}>
+        <StatusBar style="light" />
+        <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+          <LockedSheet
+            visible
+            onClose={() => router.back()}
+            title={t("dive_locked_title")}
+            body={t("dive_locked_body")}
+          />
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: BG_COLOR }}>

@@ -157,12 +157,13 @@ export function TrainingDetailScreen() {
         programSlug: programSlug ?? '',
         repeats: String(training.repeats ?? 1),
         saveCO2: training.saveCO2 ? '1' : '0',
+        isPremium: training.isPremium ? '1' : '0',
       },
     } as any);
   }
 
   useEffect(() => {
-    if (autoStart === '1' && training && !didAutoStart.current) {
+    if (autoStart === '1' && training && !training.isLocked && !didAutoStart.current) {
       didAutoStart.current = true;
       handleStart();
     }

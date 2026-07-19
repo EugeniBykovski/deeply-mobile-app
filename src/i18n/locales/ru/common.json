@@ -27,5 +27,18 @@
   "manage_subscription": "Управление подпиской",
   "legal": "Юридическое",
   "terms_of_service": "Условия использования",
-  "privacy_policy": "Политика конфиденциальности"
+  "privacy_policy": "Политика конфиденциальности",
+  "restore_purchases": "Восстановить покупки",
+  "restore_purchases_none_found": "Активная подписка не найдена.",
+  "restore_purchases_failed": "Не удалось восстановить покупки. Попробуйте снова.",
+  "trial_days_remaining_one": "Остался {{count}} день бесплатного периода",
+  "trial_days_remaining_few": "Осталось {{count}} дня бесплатного периода",
+  "trial_days_remaining_many": "Осталось {{count}} дней бесплатного периода",
+  "trial_days_remaining_other": "Осталось {{count}} дня бесплатного периода",
+  "period_week": "/ неделю",
+  "period_month": "/ месяц",
+  "period_2_months": "/ 2 месяца",
+  "period_3_months": "/ 3 месяца",
+  "period_6_months": "/ 6 месяцев",
+  "period_year": "/ год"
 }
