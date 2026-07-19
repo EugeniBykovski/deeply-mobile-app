@@ -6,6 +6,8 @@
  * - Explicit state machine: loading → ready → error (with retry).
  * - Shows subscription title, duration, localized price, restore, legal links.
  * - All purchase errors and cancellations keep the paywall open.
+ * - Never claims a free trial on a specific plan unless the store's own
+ *   product data (introPrice) confirms one exists for that exact SKU.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -18,17 +20,13 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Purchases, {
-  PACKAGE_TYPE,
-  PURCHASES_ERROR_CODE,
-  type PurchasesPackage,
-} from 'react-native-purchases';
+import { useTranslation } from 'react-i18next';
+import Purchases, { PACKAGE_TYPE, type PurchasesPackage } from 'react-native-purchases';
 import { AppText } from '@/shared/components/AppText';
+import { LiIcon } from '@/shared/components/LiIcon';
 import { colors } from '@/theme';
-import { usePurchaseStore, PRO_ENTITLEMENT } from '@/store/purchaseStore';
-import { purchaseService } from '@/api/services/purchase.service';
-import { queryClient } from '@/shared/lib/queryClient';
-import { openTerms, openPrivacy } from '@/shared/lib/openLegal';
+import { usePurchases } from '@/features/purchases/usePurchases';
+import { useEntitlement } from '@/features/entitlement/useEntitlement';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,45 +37,43 @@ type ScreenState =
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const DURATION_LABEL: Partial<Record<PACKAGE_TYPE, string>> = {
-  [PACKAGE_TYPE.WEEKLY]:      'per week',
-  [PACKAGE_TYPE.MONTHLY]:     'per month',
-  [PACKAGE_TYPE.TWO_MONTH]:   'per 2 months',
-  [PACKAGE_TYPE.THREE_MONTH]: 'per 3 months',
-  [PACKAGE_TYPE.SIX_MONTH]:   'per 6 months',
-  [PACKAGE_TYPE.ANNUAL]:      'per year',
-  [PACKAGE_TYPE.LIFETIME]:    'one-time',
-};
-
 const BEST_VALUE_TYPE: PACKAGE_TYPE = PACKAGE_TYPE.ANNUAL;
 
-function packageLabel(pkg: PurchasesPackage) {
-  const type = pkg.packageType as PACKAGE_TYPE;
-  return {
-    title:     pkg.product.title,
-    duration:  DURATION_LABEL[type] ?? 'subscription',
-    price:     pkg.product.priceString,
-    isBest:    type === BEST_VALUE_TYPE,
-  };
-}
+const PERIOD_KEY: Partial<Record<PACKAGE_TYPE, string>> = {
+  [PACKAGE_TYPE.WEEKLY]: 'period_week',
+  [PACKAGE_TYPE.MONTHLY]: 'period_month',
+  [PACKAGE_TYPE.TWO_MONTH]: 'period_2_months',
+  [PACKAGE_TYPE.THREE_MONTH]: 'period_3_months',
+  [PACKAGE_TYPE.SIX_MONTH]: 'period_6_months',
+  [PACKAGE_TYPE.ANNUAL]: 'period_year',
+};
 
-async function syncAfterPurchase() {
-  try {
-    const status = await purchaseService.sync();
-    usePurchaseStore.getState().setFromBackend(status);
-  } catch {
-    await usePurchaseStore.getState().refreshFromSdk();
-  }
-  queryClient.invalidateQueries({ queryKey: ['train'] });
-  queryClient.invalidateQueries({ queryKey: ['dive'] });
+const FEATURE_KEYS = [
+  'feature_programs',
+  'feature_timer',
+  'feature_dive_tracking',
+  'feature_history',
+  'feature_private',
+] as const;
+
+/** Only ever surfaces a trial if the store's own product data confirms a
+ *  zero-cost introductory offer on this exact package — never assumed. */
+function getFreeTrialDays(pkg: PurchasesPackage): number | null {
+  const intro = pkg.product.introPrice;
+  if (!intro || intro.price !== 0 || intro.periodUnit !== 'DAY') return null;
+  return intro.periodNumberOfUnits;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PaywallScreen() {
-  const [state, setState]         = useState<ScreenState>({ kind: 'loading' });
-  const [selected, setSelected]   = useState<PurchasesPackage | null>(null);
-  const [purchasing, setPurchasing] = useState(false);
+  const { t } = useTranslation('paywall');
+  const { t: tCommon } = useTranslation('common');
+  const { purchasePackage, restorePurchases, isPurchasing } = usePurchases();
+  const { isTrialActive, trialDaysRemaining } = useEntitlement();
+
+  const [state, setState] = useState<ScreenState>({ kind: 'loading' });
+  const [selected, setSelected] = useState<PurchasesPackage | null>(null);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
   const restoreTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -89,7 +85,7 @@ export default function PaywallScreen() {
       const offerings = await Purchases.getOfferings();
       const pkgs = offerings.current?.availablePackages ?? [];
       if (pkgs.length === 0) {
-        setState({ kind: 'error', message: 'No subscription plans are available right now. Please try again later.' });
+        setState({ kind: 'error', message: t('error_no_plans') });
         return;
       }
       setState({ kind: 'ready', packages: pkgs });
@@ -99,10 +95,10 @@ export default function PaywallScreen() {
     } catch (err: any) {
       setState({
         kind: 'error',
-        message: err?.message ?? 'Could not load subscription plans. Check your connection and try again.',
+        message: err?.message ?? t('error_load_failed'),
       });
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadOfferings();
@@ -114,50 +110,26 @@ export default function PaywallScreen() {
   // ── Purchase ────────────────────────────────────────────────────────────────
 
   const handleSubscribe = useCallback(async () => {
-    if (!selected || purchasing) return;
-    setPurchasing(true);
-    try {
-      const { customerInfo } = await Purchases.purchasePackage(selected);
-      const isNowPro = customerInfo.entitlements.active[PRO_ENTITLEMENT] !== undefined;
-      if (isNowPro) {
-        await syncAfterPurchase();
-        // Only successful purchase closes the paywall
-        router.back();
-      }
-    } catch (err: any) {
-      if (err?.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
-        // User cancelled — keep paywall open, no error shown
-        return;
-      }
-      setState({
-        kind: 'error',
-        message: err?.message ?? 'Purchase failed. Please try again.',
-      });
-    } finally {
-      setPurchasing(false);
+    if (!selected || isPurchasing) return;
+    const result = await purchasePackage(selected);
+    if (result.success) {
+      // Only a successful purchase closes the paywall — cancellations and
+      // failures keep it open (usePurchases already surfaces failure alerts).
+      router.back();
     }
-  }, [selected, purchasing]);
+  }, [selected, isPurchasing, purchasePackage]);
 
   // ── Restore ─────────────────────────────────────────────────────────────────
 
   const handleRestore = useCallback(async () => {
-    if (purchasing) return;
-    setPurchasing(true);
-    try {
-      const info = await Purchases.restorePurchases();
-      const isNowPro = info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
-      if (isNowPro) {
-        await syncAfterPurchase();
-        router.back();
-        return;
-      }
-      showRestoreMessage('No active subscription found.');
-    } catch {
-      showRestoreMessage('Restore failed. Please try again.');
-    } finally {
-      setPurchasing(false);
+    if (isPurchasing) return;
+    const result = await restorePurchases();
+    if (result.success) {
+      router.back();
+      return;
     }
-  }, [purchasing]);
+    showRestoreMessage(t('restore_purchases_none_found'));
+  }, [isPurchasing, restorePurchases, t]);
 
   function showRestoreMessage(msg: string) {
     setRestoreMsg(msg);
@@ -168,6 +140,10 @@ export default function PaywallScreen() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   const isReady = state.kind === 'ready';
+  const heroSubtitle =
+    isTrialActive && trialDaysRemaining != null
+      ? t('hero_subtitle_trial_active', { count: trialDaysRemaining })
+      : t('hero_subtitle_eligible');
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -179,7 +155,7 @@ export default function PaywallScreen() {
           onPress={() => router.back()}
           hitSlop={14}
           style={styles.closeBtn}
-          accessibilityLabel="Close"
+          accessibilityLabel={t('close')}
           accessibilityRole="button"
         >
           <AppText style={styles.closeIcon}>✕</AppText>
@@ -195,20 +171,35 @@ export default function PaywallScreen() {
         {/* ── Hero ──────────────────────────────────────────────────────────── */}
         <View style={styles.hero}>
           <AppText variant="title" weight="bold" style={styles.heroTitle}>
-            Deeply Ocean Pro
+            {t('hero_title')}
           </AppText>
           <AppText secondary style={styles.heroSubtitle}>
-            Unlock all training programs, dive templates, and full analytics.
+            {heroSubtitle}
           </AppText>
         </View>
 
         {/* ── Features ─────────────────────────────────────────────────────── */}
-        {FEATURES.map((f) => (
-          <View key={f} style={styles.featureRow}>
+        {FEATURE_KEYS.map((key) => (
+          <View key={key} style={styles.featureRow}>
             <AppText style={styles.checkmark}>✓</AppText>
-            <AppText secondary style={styles.featureText}>{f}</AppText>
+            <AppText secondary style={styles.featureText}>{t(key)}</AppText>
           </View>
         ))}
+
+        {/* ── After your trial ────────────────────────────────────────────── */}
+        <View style={styles.afterTrialBox}>
+          <View style={styles.afterTrialIcon}>
+            <LiIcon name="lock-open" size={16} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText weight="semibold" style={{ marginBottom: 2 }}>
+              {t('after_trial_title')}
+            </AppText>
+            <AppText variant="caption" secondary style={{ lineHeight: 18 }}>
+              {t('after_trial_body')}
+            </AppText>
+          </View>
+        </View>
 
         <View style={styles.divider} />
 
@@ -221,14 +212,18 @@ export default function PaywallScreen() {
           <View style={styles.errorBox}>
             <AppText secondary style={styles.errorText}>{state.message}</AppText>
             <Pressable onPress={loadOfferings} style={styles.retryBtn}>
-              <AppText style={styles.retryLabel}>Try again</AppText>
+              <AppText style={styles.retryLabel}>{tCommon('retry')}</AppText>
             </Pressable>
           </View>
         )}
 
         {isReady && state.packages.map((pkg) => {
-          const { title, duration, price, isBest } = packageLabel(pkg);
+          const type = pkg.packageType as PACKAGE_TYPE;
           const isSelected = selected?.identifier === pkg.identifier;
+          const isBest = type === BEST_VALUE_TYPE;
+          const periodKey = PERIOD_KEY[type];
+          const freeTrialDays = getFreeTrialDays(pkg);
+
           return (
             <Pressable
               key={pkg.identifier}
@@ -238,14 +233,21 @@ export default function PaywallScreen() {
               accessibilityState={{ checked: isSelected }}
             >
               <View style={styles.planCardLeft}>
-                <AppText weight="semibold" style={styles.planTitle}>{title}</AppText>
-                <AppText variant="caption" secondary style={styles.planDuration}>{duration}</AppText>
+                <AppText weight="semibold" style={styles.planTitle}>{pkg.product.title}</AppText>
+                <AppText variant="caption" secondary style={styles.planDuration}>
+                  {periodKey ? tCommon(periodKey) : ''}
+                </AppText>
+                {freeTrialDays != null && (
+                  <AppText variant="caption" style={{ color: colors.accent, marginTop: 2 }}>
+                    {t('plan_trial_offer', { count: freeTrialDays, price: pkg.product.priceString })}
+                  </AppText>
+                )}
               </View>
               <View style={styles.planCardRight}>
-                <AppText weight="bold" style={styles.planPrice}>{price}</AppText>
+                <AppText weight="bold" style={styles.planPrice}>{pkg.product.priceString}</AppText>
                 {isBest && (
                   <View style={styles.badge}>
-                    <AppText style={styles.badgeText}>Best value</AppText>
+                    <AppText style={styles.badgeText}>{t('plan_best_value')}</AppText>
                   </View>
                 )}
               </View>
@@ -262,57 +264,47 @@ export default function PaywallScreen() {
         {isReady && (
           <Pressable
             onPress={handleSubscribe}
-            disabled={purchasing || !selected}
-            style={[styles.subscribeBtn, (purchasing || !selected) && styles.subscribeBtnDisabled]}
+            disabled={isPurchasing || !selected}
+            style={[styles.subscribeBtn, (isPurchasing || !selected) && styles.subscribeBtnDisabled]}
             accessibilityRole="button"
-            accessibilityLabel="Subscribe now"
+            accessibilityLabel={t('subscribe_cta')}
           >
-            {purchasing
+            {isPurchasing
               ? <ActivityIndicator color="#fff" />
-              : <AppText weight="bold" style={styles.subscribeBtnLabel}>Subscribe now</AppText>
+              : <AppText weight="bold" style={styles.subscribeBtnLabel}>{t('subscribe_cta')}</AppText>
             }
           </Pressable>
         )}
 
         <Pressable
           onPress={handleRestore}
-          disabled={purchasing}
+          disabled={isPurchasing}
           style={styles.restoreBtn}
           accessibilityRole="button"
         >
           <AppText variant="caption" style={styles.restoreLabel}>
-            {restoreMsg ?? 'Restore purchases'}
+            {restoreMsg ?? t('restore_purchases')}
           </AppText>
         </Pressable>
 
         {/* ── Required Apple 3.1.2(c) disclosure ─────────────────────────── */}
         <AppText variant="caption" muted style={styles.disclosure}>
-          Subscription renews automatically unless cancelled at least 24 hours
-          before the end of the current period. Manage in App Store Settings.
+          {t('renewal_disclosure')}
         </AppText>
 
         <View style={styles.legalRow}>
-          <Pressable onPress={() => openTerms()} hitSlop={8} accessibilityRole="link">
-            <AppText variant="caption" style={styles.legalLink}>Terms of Use</AppText>
+          <Pressable onPress={() => router.push('/legal/terms' as any)} hitSlop={8} accessibilityRole="link">
+            <AppText variant="caption" style={styles.legalLink}>{t('terms_of_use')}</AppText>
           </Pressable>
           <AppText variant="caption" muted style={styles.legalSep}>·</AppText>
-          <Pressable onPress={() => openPrivacy()} hitSlop={8} accessibilityRole="link">
-            <AppText variant="caption" style={styles.legalLink}>Privacy Policy</AppText>
+          <Pressable onPress={() => router.push('/legal/privacy' as any)} hitSlop={8} accessibilityRole="link">
+            <AppText variant="caption" style={styles.legalLink}>{t('privacy_policy')}</AppText>
           </Pressable>
         </View>
       </View>
     </SafeAreaView>
   );
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const FEATURES = [
-  'All breathing & apnea programs',
-  'Full dive-session tracking',
-  'Detailed training history',
-  'Unlimited private trainings',
-];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -372,6 +364,26 @@ const styles = StyleSheet.create({
   },
   featureText: {
     flex: 1,
+  },
+  afterTrialBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 8,
+  },
+  afterTrialIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: `${colors.accent}18`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   divider: {
     height: 1,

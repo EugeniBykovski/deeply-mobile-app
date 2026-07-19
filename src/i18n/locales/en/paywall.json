@@ -1,0 +1,37 @@
+{
+  "hero_title": "Deeply Pro",
+  "hero_subtitle_eligible": "Full access to every program, dive template, and professional timer.",
+  "hero_subtitle_trial_active_one": "{{count}} day left in your free trial. Subscribe now to keep full access after it ends.",
+  "hero_subtitle_trial_active_other": "{{count}} days left in your free trial. Subscribe now to keep full access after it ends.",
+
+  "feature_programs": "All breathing & apnea programs",
+  "feature_dive_tracking": "Full dive-session tracking",
+  "feature_history": "Detailed training history",
+  "feature_private": "Unlimited private trainings",
+  "feature_timer": "Professional breath-hold & dive timers",
+
+  "after_trial_title": "After your trial",
+  "after_trial_body": "One introductory practice in every topic stays free, always. Deeply Pro unlocks everything else.",
+
+  "plan_best_value": "Best value",
+  "plan_trial_offer": "{{count}}-day free trial, then {{price}}",
+
+  "subscribe_cta": "Subscribe Now",
+  "restore_purchases": "Restore Purchases",
+  "restore_purchases_none_found": "No active subscription found.",
+  "restore_purchases_failed": "Restore failed. Please try again.",
+
+  "renewal_disclosure": "Subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.",
+
+  "terms_of_use": "Terms of Use",
+  "privacy_policy": "Privacy Policy",
+
+  "error_no_plans": "No subscription plans are available right now. Please try again later.",
+  "error_load_failed": "Could not load subscription plans. Check your connection and try again.",
+  "error_purchase_failed": "Purchase failed. Please try again.",
+  "error_restore_failed": "Something went wrong.",
+  "purchase_failed_title": "Purchase failed",
+  "restore_failed_title": "Restore failed",
+
+  "close": "Close"
+}

@@ -8,6 +8,7 @@ import enAuth from './locales/en/auth.json';
 import enTabs from './locales/en/tabs.json';
 import enLegal from './locales/en/legal.json';
 import enTrialAnnouncement from './locales/en/trialAnnouncement.json';
+import enPaywall from './locales/en/paywall.json';
 
 import ruCommon from './locales/ru/common.json';
 import ruOnboarding from './locales/ru/onboarding.json';
@@ -15,6 +16,7 @@ import ruAuth from './locales/ru/auth.json';
 import ruTabs from './locales/ru/tabs.json';
 import ruLegal from './locales/ru/legal.json';
 import ruTrialAnnouncement from './locales/ru/trialAnnouncement.json';
+import ruPaywall from './locales/ru/paywall.json';
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -36,6 +38,7 @@ i18n.use(initReactI18next).init({
       tabs: enTabs,
       legal: enLegal,
       trialAnnouncement: enTrialAnnouncement,
+      paywall: enPaywall,
     },
     ru: {
       common: ruCommon,
@@ -44,6 +47,7 @@ i18n.use(initReactI18next).init({
       tabs: ruTabs,
       legal: ruLegal,
       trialAnnouncement: ruTrialAnnouncement,
+      paywall: ruPaywall,
     },
   },
   defaultNS: 'common',

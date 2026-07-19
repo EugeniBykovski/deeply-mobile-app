@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Purchases, {
   PURCHASES_ERROR_CODE,
   type PurchasesPackage,
@@ -10,6 +11,7 @@ import { purchaseService } from '@/api/services/purchase.service';
 import { queryClient } from '@/shared/lib/queryClient';
 
 export function usePurchases() {
+  const { t } = useTranslation('paywall');
   const { isPro, proExpiresAt, isLoading, isPurchasing } = usePurchaseStore();
   const setFromBackend = usePurchaseStore((s) => s.setFromBackend);
 
@@ -62,17 +64,14 @@ export function usePurchases() {
         return { success: isNowPro, customerInfo };
       } catch (err: any) {
         if (err?.code !== PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
-          Alert.alert(
-            'Purchase failed',
-            err?.message ?? 'Something went wrong. Please try again.',
-          );
+          Alert.alert(t('purchase_failed_title'), err?.message ?? t('error_purchase_failed'));
         }
         return { success: false, customerInfo: null };
       } finally {
         usePurchaseStore.setState({ isPurchasing: false });
       }
     },
-    [],
+    [t],
   ); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Restore purchases ───────────────────────────────────────────────────────
@@ -90,12 +89,12 @@ export function usePurchases() {
 
       return { success: isNowPro };
     } catch (err: any) {
-      Alert.alert('Restore failed', err?.message ?? 'Something went wrong.');
+      Alert.alert(t('restore_failed_title'), err?.message ?? t('error_restore_failed'));
       return { success: false };
     } finally {
       usePurchaseStore.setState({ isPurchasing: false });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Open Customer Center ────────────────────────────────────────────────────
 
