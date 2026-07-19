@@ -163,6 +163,22 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="timer/session"
+              options={{
+                animation: 'slide_from_bottom',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
+              name="timer/history"
+              options={{
+                animation: 'slide_from_right',
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+              }}
+            />
+            <Stack.Screen
               name="paywall"
               options={{
                 presentation: 'modal',

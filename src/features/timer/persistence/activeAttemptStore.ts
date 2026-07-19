@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { createFileSystemStorage } from '@/shared/lib/fileSystemStorage';
-import { INITIAL_TIMER_ENGINE_STATE, type TimerEngineState } from '../domain/timerEngine';
+import { INITIAL_TIMER_ENGINE_STATE, type CapturedAttempt, type TimerEngineState } from '../domain/timerEngine';
 
 const storage = createFileSystemStorage();
 
@@ -16,8 +16,16 @@ interface ActiveAttemptState {
    * network failure never double-records the attempt server-side.
    */
   clientAttemptId: string | null;
+  /**
+   * An attempt STOP has already captured but the app hasn't yet confirmed
+   * (e.g. the user is still on the optional attempt-details sheet). Persisted
+   * so a crash between capture and confirmation doesn't lose it — the
+   * captured attempt itself (not just the engine snapshot) needs to survive.
+   */
+  pendingAttempt: CapturedAttempt | null;
 
   setSnapshot: (snapshot: TimerEngineState, clientAttemptId?: string | null) => void;
+  setPendingAttempt: (attempt: CapturedAttempt | null) => void;
   clear: () => void;
 }
 
@@ -27,6 +35,7 @@ export const useActiveAttemptStore = create<ActiveAttemptState>()(
       _hasHydrated: false,
       snapshot: INITIAL_TIMER_ENGINE_STATE,
       clientAttemptId: null,
+      pendingAttempt: null,
 
       setSnapshot: (snapshot, clientAttemptId) =>
         set((s) => ({
@@ -34,7 +43,10 @@ export const useActiveAttemptStore = create<ActiveAttemptState>()(
           clientAttemptId: clientAttemptId !== undefined ? clientAttemptId : s.clientAttemptId,
         })),
 
-      clear: () => set({ snapshot: INITIAL_TIMER_ENGINE_STATE, clientAttemptId: null }),
+      setPendingAttempt: (pendingAttempt) => set({ pendingAttempt }),
+
+      clear: () =>
+        set({ snapshot: INITIAL_TIMER_ENGINE_STATE, clientAttemptId: null, pendingAttempt: null }),
     }),
     {
       name: 'deeply-timer-active-attempt',

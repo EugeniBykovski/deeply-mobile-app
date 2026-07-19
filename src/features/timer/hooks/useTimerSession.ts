@@ -19,19 +19,34 @@ import { timerService } from '../api/timerService';
 const KEEP_AWAKE_TAG = 'deeply-timer-session';
 const ACTIVE_STATUSES: TimerEngineState['status'][] = ['preparing', 'active', 'recovering'];
 
+/** Optional per-attempt metadata — attached at confirmation time, after the
+ *  timing capture itself, since none of it can be known until the attempt
+ *  is over and the brief requires all of it to be skippable. */
+export interface AttemptDetails {
+  depthMeters?: number;
+  diveType?: string;
+  location?: string;
+  equalizationNotes?: string;
+  contractionsCount?: number;
+  comfortRating?: number;
+  notes?: string;
+}
+
 export interface UseTimerSessionOptions {
   /** Fires on every state transition — Phase E attaches haptics/sound here. */
   onPhaseChange?: (state: TimerEngineState) => void;
-  /** Fires exactly when STOP finalizes an in-progress attempt. */
+  /** Fires exactly when STOP finalizes an in-progress attempt, before confirmation. */
   onAttemptCaptured?: (attempt: CapturedAttempt) => void;
 }
 
 export function useTimerSession(options: UseTimerSessionOptions = {}) {
   const setPersisted = useActiveAttemptStore((s) => s.setSnapshot);
+  const setPersistedPending = useActiveAttemptStore((s) => s.setPendingAttempt);
   const persistedClientAttemptId = useActiveAttemptStore((s) => s.clientAttemptId);
   const restorable = useRestorableAttempt();
 
   const [state, setState] = useState<TimerEngineState>(INITIAL_TIMER_ENGINE_STATE);
+  const [pendingAttempt, setPendingAttempt] = useState<CapturedAttempt | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const clientAttemptIdRef = useRef<string | null>(persistedClientAttemptId);
   const [, forceTick] = useState(0);
@@ -73,12 +88,13 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
   }, [state.status]);
 
   const saveAttempt = useCallback(
-    async (mode: TimerMode, captured: CapturedAttempt, clientAttemptId: string) => {
+    async (mode: TimerMode, captured: CapturedAttempt, clientAttemptId: string, details?: AttemptDetails) => {
       const payload: CreateTimerAttemptPayload = {
         clientAttemptId,
         startedAt: new Date(captured.startedAtMs).toISOString(),
         finishedAt: new Date(captured.finishedAtMs).toISOString(),
         durationSeconds: Math.round(captured.durationMs / 1000),
+        ...details,
       };
 
       try {
@@ -94,7 +110,7 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
           return withSessionId;
         });
       } catch {
-        // Non-fatal — the attempt stays captured locally (persisted snapshot +
+        // Non-fatal — the attempt stays captured locally (persisted pendingAttempt +
         // clientAttemptId); a later retry can resend it idempotently, since
         // the backend upserts on (sessionId, clientAttemptId).
       }
@@ -109,26 +125,43 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
 
       if (next.sessionId !== null) sessionIdRef.current = next.sessionId;
       setState(next);
+      setPersisted(next);
 
       if (capturedAttempt) {
-        const clientAttemptId = Crypto.randomUUID();
-        clientAttemptIdRef.current = clientAttemptId;
-        setPersisted(next, clientAttemptId);
+        // Captured, not yet saved — the caller confirms via confirmPendingAttempt()
+        // once any optional details (comfort rating, notes, depth, ...) are entered
+        // or explicitly skipped. Persisted immediately so a crash before
+        // confirmation doesn't lose it.
+        setPendingAttempt(capturedAttempt);
+        setPersistedPending(capturedAttempt);
         onAttemptCapturedRef.current?.(capturedAttempt);
-        if (next.mode) void saveAttempt(next.mode, capturedAttempt, clientAttemptId);
-      } else {
-        setPersisted(next);
       }
 
       onPhaseChangeRef.current?.(next);
     },
-    [state, setPersisted, saveAttempt],
+    [state, setPersisted, setPersistedPending],
+  );
+
+  /** Attaches optional details (or none) and persists the pending attempt to the backend. */
+  const confirmPendingAttempt = useCallback(
+    (details?: AttemptDetails) => {
+      if (!pendingAttempt || !state.mode) return;
+      const clientAttemptId = clientAttemptIdRef.current ?? Crypto.randomUUID();
+      clientAttemptIdRef.current = clientAttemptId;
+
+      void saveAttempt(state.mode, pendingAttempt, clientAttemptId, details);
+
+      setPendingAttempt(null);
+      setPersistedPending(null);
+    },
+    [pendingAttempt, state.mode, saveAttempt, setPersistedPending],
   );
 
   const start = useCallback(
     (mode: TimerMode, opts?: { prepSeconds?: number }) => {
       sessionIdRef.current = null;
       clientAttemptIdRef.current = null;
+      setPendingAttempt(null);
       runAction({ type: 'START', mode, sessionId: null, prepSeconds: opts?.prepSeconds });
     },
     [runAction],
@@ -137,6 +170,7 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
   const startNextAttempt = useCallback(
     (opts?: { prepSeconds?: number }) => {
       if (!state.mode) return;
+      clientAttemptIdRef.current = null;
       runAction({ type: 'START', mode: state.mode, sessionId: sessionIdRef.current, prepSeconds: opts?.prepSeconds });
     },
     [runAction, state.mode],
@@ -147,13 +181,16 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
   const stop = useCallback(() => runAction({ type: 'STOP' }), [runAction]);
   const cancel = useCallback(() => runAction({ type: 'CANCEL' }), [runAction]);
 
-  /** Loads the persisted in-progress attempt into the live engine — the
-   *  user's explicit "Resume" choice from Phase E's restore prompt. */
+  /** Loads the persisted in-progress attempt (and any unconfirmed captured
+   *  attempt) into the live engine — the user's explicit "Resume" choice
+   *  from Phase E's restore prompt. */
   const restoreActive = useCallback(() => {
     if (!restorable.snapshot) return;
+    const stored = useActiveAttemptStore.getState();
     sessionIdRef.current = restorable.snapshot.sessionId;
-    clientAttemptIdRef.current = useActiveAttemptStore.getState().clientAttemptId;
+    clientAttemptIdRef.current = stored.clientAttemptId;
     setState(restorable.snapshot);
+    setPendingAttempt(stored.pendingAttempt);
   }, [restorable.snapshot]);
 
   /** Discards the persisted in-progress attempt entirely — the user's
@@ -161,6 +198,7 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
   const discardActive = useCallback(() => {
     restorable.discard();
     setState(INITIAL_TIMER_ENGINE_STATE);
+    setPendingAttempt(null);
     sessionIdRef.current = null;
     clientAttemptIdRef.current = null;
   }, [restorable]);
@@ -168,6 +206,8 @@ export function useTimerSession(options: UseTimerSessionOptions = {}) {
   return {
     state,
     elapsedMs: getElapsedMs(state, systemClock),
+    pendingAttempt,
+    confirmPendingAttempt,
     hasRestorable: restorable.hasRestorable,
     restorableSnapshot: restorable.snapshot,
     start,

@@ -24,6 +24,7 @@ describe('activeAttemptStore', () => {
     useActiveAttemptStore.setState({
       snapshot: INITIAL_TIMER_ENGINE_STATE,
       clientAttemptId: null,
+      pendingAttempt: null,
     });
   });
 
@@ -89,5 +90,22 @@ describe('activeAttemptStore', () => {
     useActiveAttemptStore.getState().setSnapshot({ ...INITIAL_TIMER_ENGINE_STATE, status: 'active' }, 'attempt-1');
     useActiveAttemptStore.getState().setSnapshot({ ...INITIAL_TIMER_ENGINE_STATE, status: 'recovering' });
     expect(useActiveAttemptStore.getState().clientAttemptId).toBe('attempt-1');
+  });
+
+  it('setPendingAttempt persists a captured-but-unconfirmed attempt so it survives a crash before confirmation', () => {
+    const captured = { attemptIndex: 0, startedAtMs: 1000, finishedAtMs: 60_000, durationMs: 59_000 };
+    useActiveAttemptStore.getState().setPendingAttempt(captured);
+    expect(useActiveAttemptStore.getState().pendingAttempt).toEqual(captured);
+  });
+
+  it('clear() also clears any pending unconfirmed attempt', () => {
+    useActiveAttemptStore.getState().setPendingAttempt({
+      attemptIndex: 0,
+      startedAtMs: 1000,
+      finishedAtMs: 60_000,
+      durationMs: 59_000,
+    });
+    useActiveAttemptStore.getState().clear();
+    expect(useActiveAttemptStore.getState().pendingAttempt).toBeNull();
   });
 });

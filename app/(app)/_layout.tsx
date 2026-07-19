@@ -79,6 +79,15 @@ export default function AppTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="timer/index"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon liIcon="timer" focused={focused} />
+          ),
+          tabBarAccessibilityLabel: t("timer"),
+        }}
+      />
+      <Tabs.Screen
         name="results/index"
         options={{
           tabBarIcon: ({ focused }) => (
