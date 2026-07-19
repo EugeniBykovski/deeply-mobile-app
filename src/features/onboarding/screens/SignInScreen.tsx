@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,20 @@ import { AppleAuthButton } from "@/features/auth/AppleAuthButton";
 import { useAppleAuth } from "@/features/auth/useAppleAuth";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import { useAuthStore } from "@/store/authStore";
+import { acknowledgeTrialAnnouncement, TRIAL_ANNOUNCEMENT_MODAL_VERSION } from "@/features/trial-announcement";
+import { trackEvent } from "@/shared/lib/analytics";
 import { colors } from "@/theme";
+
+/**
+ * Onboarding's own "Trial and access" screen already explained the trial —
+ * pre-acknowledge the separate TrialAnnouncementModal (shown once inside the
+ * main app shell) here so it never fires again immediately after, for
+ * whichever identity is now known (the real user id post sign-in, or the
+ * anonymous bucket if skipped).
+ */
+function suppressRedundantTrialAnnouncement(userId: string | null) {
+  acknowledgeTrialAnnouncement(userId, TRIAL_ANNOUNCEMENT_MODAL_VERSION).catch(() => {});
+}
 
 const openTerms = () => router.push("/legal/terms" as any);
 const openPrivacy = () => router.push("/legal/privacy" as any);
@@ -20,6 +33,10 @@ export function SignInScreen() {
   const { complete } = useOnboardingStore();
   const { signIn, isLoading, error } = useAppleAuth();
   const [consentVisible, setConsentVisible] = useState(false);
+
+  useEffect(() => {
+    trackEvent("onboarding_step_viewed", { step: "auth" });
+  }, []);
 
   const handleSignInPress = () => {
     setConsentVisible(true);
@@ -36,6 +53,8 @@ export function SignInScreen() {
     // install who went through the questionnaire), complete() ensures
     // isCompleted is persisted for future cold starts.
     complete();
+    trackEvent("onboarding_completed", { signed_in: true });
+    suppressRedundantTrialAnnouncement(useAuthStore.getState().user?.id ?? null);
     router.replace("/(app)/train");
   };
 
@@ -45,6 +64,8 @@ export function SignInScreen() {
 
   const handleSkip = () => {
     complete();
+    trackEvent("onboarding_completed", { signed_in: false });
+    suppressRedundantTrialAnnouncement(null);
     router.replace("/(app)/train");
   };
 

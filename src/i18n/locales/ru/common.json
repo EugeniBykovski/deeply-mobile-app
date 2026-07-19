@@ -40,5 +40,7 @@
   "period_2_months": "/ 2 месяца",
   "period_3_months": "/ 3 месяца",
   "period_6_months": "/ 6 месяцев",
-  "period_year": "/ год"
+  "period_year": "/ год",
+  "welcome_guide": "Гид по приложению",
+  "replay_onboarding": "Показать приветствие заново"
 }

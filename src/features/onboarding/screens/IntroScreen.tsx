@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Image, Pressable, ScrollView, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,6 +8,8 @@ import { StatusBar } from "expo-status-bar";
 import { AppText } from "@/shared/components/AppText";
 import { AppButton } from "@/shared/components/AppButton";
 import { LiIcon } from "@/shared/components/LiIcon";
+import { pushOnboardingStep } from "../utils/navigate";
+import { trackEvent } from "@/shared/lib/analytics";
 import { colors } from "@/theme";
 
 const BENEFITS: {
@@ -45,6 +47,11 @@ const BENEFITS: {
 export function IntroScreen() {
   const { t } = useTranslation("onboarding");
   const insets = useSafeAreaInsets();
+  const { review } = useLocalSearchParams<{ review?: string }>();
+
+  useEffect(() => {
+    trackEvent("onboarding_step_viewed", { step: "intro" });
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -169,7 +176,7 @@ export function IntroScreen() {
             variant="primary"
             size="lg"
             className="w-full"
-            onPress={() => router.push("/(onboarding)/goals")}
+            onPress={() => pushOnboardingStep("/(onboarding)/goals", review)}
           />
         </View>
       </ScrollView>

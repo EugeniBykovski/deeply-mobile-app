@@ -256,6 +256,16 @@ export function SettingsScreen() {
         {/* 2 ── Language ────────────────────────────────────────────────── */}
         <LanguageSection />
 
+        {/* 2 ── Welcome guide ───────────────────────────────────────────── */}
+        <Section title={t("welcome_guide")}>
+          <Row
+            icon="books-2"
+            label={t("replay_onboarding")}
+            onPress={() => router.push({ pathname: "/(onboarding)", params: { review: "1" } } as any)}
+            last
+          />
+        </Section>
+
         {/* 2 ── Legal ─────────────────────────────────────── */}
         <Section title={t("legal")}>
           <Row

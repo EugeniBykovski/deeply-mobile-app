@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { OnboardingLayout } from '../components/OnboardingLayout';
+import { pushOnboardingStep } from '../utils/navigate';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { useOnboardingStore, type OnboardingGoal } from '@/store/onboardingStore';
+import { trackEvent } from '@/shared/lib/analytics';
 import { colors } from '@/theme';
 
 const GOALS: { key: OnboardingGoal; icon: string; labelKey: string }[] = [
@@ -19,8 +21,13 @@ const GOALS: { key: OnboardingGoal; icon: string; labelKey: string }[] = [
 
 export function GoalScreen() {
   const { t } = useTranslation('onboarding');
+  const { review } = useLocalSearchParams<{ review?: string }>();
   const { data, setGoals } = useOnboardingStore();
   const [selected, setSelected] = useState<OnboardingGoal[]>(data.goals);
+
+  useEffect(() => {
+    trackEvent('onboarding_step_viewed', { step: 'goal' });
+  }, []);
 
   const toggle = (key: OnboardingGoal) => {
     setSelected((prev) =>
@@ -30,7 +37,8 @@ export function GoalScreen() {
 
   const handleContinue = () => {
     setGoals(selected);
-    router.push('/(onboarding)/mode');
+    trackEvent('onboarding_goal_selected', { count: selected.length });
+    pushOnboardingStep('/(onboarding)/level', review);
   };
 
   return (

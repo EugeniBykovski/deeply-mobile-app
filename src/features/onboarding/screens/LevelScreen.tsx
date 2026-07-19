@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { OnboardingLayout } from '../components/OnboardingLayout';
+import { pushOnboardingStep } from '../utils/navigate';
 import { AppText } from '@/shared/components/AppText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { useOnboardingStore, type ExperienceLevel } from '@/store/onboardingStore';
+import { trackEvent } from '@/shared/lib/analytics';
 import { colors } from '@/theme';
 
 const LEVELS: {
@@ -22,18 +24,24 @@ const LEVELS: {
 
 export function LevelScreen() {
   const { t } = useTranslation('onboarding');
+  const { review } = useLocalSearchParams<{ review?: string }>();
   const { data, setLevel } = useOnboardingStore();
   const [selected, setSelected] = useState<ExperienceLevel | null>(data.level);
+
+  useEffect(() => {
+    trackEvent('onboarding_step_viewed', { step: 'level' });
+  }, []);
 
   const handleContinue = () => {
     if (!selected) return;
     setLevel(selected);
-    router.push('/(onboarding)/auth');
+    trackEvent('onboarding_level_selected', { level: selected });
+    pushOnboardingStep('/(onboarding)/safety', review);
   };
 
   return (
     <OnboardingLayout
-      step={5}
+      step={3}
       totalSteps={5}
       title={t('level_title')}
       subtitle={t('level_subtitle')}

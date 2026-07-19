@@ -19,18 +19,6 @@
   "goal_freediving": "Learn freediving",
   "goal_sleep": "Better sleep",
 
-  "mode_title": "How much time per session?",
-  "mode_subtitle": "We will personalise your program.",
-  "mode_5": "5 min",
-  "mode_10": "10 min",
-  "mode_20": "20 min",
-  "mode_40": "40 min",
-
-  "notes_title": "Track your feelings?",
-  "notes_subtitle": "Would you like to add personal notes after each session?",
-  "notes_yes": "Yes, I want to track how I feel",
-  "notes_no": "No, just the training for now",
-
   "level_title": "Your experience level",
   "level_subtitle": "We will match programs to your level.",
   "level_beginner": "Beginner",
@@ -41,6 +29,21 @@
   "level_regular_desc": "I practice consistently.",
   "level_pro": "Professional freediver",
   "level_pro_desc": "I train at competitive level.",
+
+  "safety_title": "Train safely",
+  "safety_subtitle": "Breath-hold and freediving training carries real risk. Please read this before continuing.",
+  "safety_point_no_solo": "Never practice breath-holding in water alone — always train with a buddy who can help.",
+  "safety_point_no_hyperventilate": "Do not hyperventilate before a breath-hold. It can mask warning signs your body needs to breathe.",
+  "safety_point_stop_if_unwell": "Stop immediately if you feel dizzy, lightheaded, or unwell in any way.",
+  "safety_point_not_medical_advice": "Deeply is a training tool, not medical advice. It does not diagnose, treat, or guarantee your safety.",
+  "safety_acknowledge": "I understand and will follow these safety guidelines.",
+
+  "trial_title": "Try Deeply Pro free for 7 days",
+  "trial_subtitle": "Here's exactly what that means.",
+  "trial_point_full_access": "Full access to every program, dive template, and the professional timers for 7 days.",
+  "trial_point_free_after": "After the trial, one introductory practice in each topic stays free — always.",
+  "trial_point_pro": "Everything else requires Deeply Pro, shown with the real price from the App Store when you choose a plan.",
+  "trial_disclosure": "The trial starts only after you choose a plan and confirm the subscription in the App Store. You can cancel anytime in your Apple ID settings.",
 
   "signin_title": "Save your progress",
   "signin_subtitle": "Sign in with Apple to sync your data across devices and unlock all features.",

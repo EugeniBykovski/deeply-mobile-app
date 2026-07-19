@@ -5,6 +5,10 @@ import type { SupportedLanguage } from '@/i18n';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** Bump when onboarding content changes materially — recorded on completion
+ *  so a future rebuild can compare against what a user actually saw. */
+export const ONBOARDING_VERSION = 2;
+
 export type OnboardingGoal =
   | 'stress'
   | 'breathing'
@@ -12,8 +16,6 @@ export type OnboardingGoal =
   | 'oxygen'
   | 'freediving'
   | 'sleep';
-
-export type SessionMode = '5' | '10' | '20' | '40';
 
 export type ExperienceLevel =
   | 'beginner'
@@ -23,8 +25,6 @@ export type ExperienceLevel =
 
 export interface OnboardingData {
   goals: OnboardingGoal[];
-  sessionMode: SessionMode | null;
-  wantsNotes: boolean | null;
   level: ExperienceLevel | null;
 }
 
@@ -34,6 +34,8 @@ interface OnboardingState {
 
   /** True once the user has finished the onboarding questionnaire flow. */
   isCompleted: boolean;
+  /** ONBOARDING_VERSION at the time isCompleted was last set true. */
+  completedOnboardingVersion: number | null;
 
   /**
    * True once the user has successfully authenticated via Apple Sign-In
@@ -44,14 +46,17 @@ interface OnboardingState {
    */
   hasEverSignedIn: boolean;
 
+  /** Explicit acknowledgement of the apnea/hyperventilation safety guidance
+   *  shown during onboarding — required before onboarding can complete. */
+  safetyAcknowledged: boolean;
+
   language: SupportedLanguage;
   data: OnboardingData;
 
   // Actions
   setGoals: (goals: OnboardingGoal[]) => void;
-  setSessionMode: (mode: SessionMode) => void;
-  setWantsNotes: (wants: boolean) => void;
   setLevel: (level: ExperienceLevel) => void;
+  setSafetyAcknowledged: (acknowledged: boolean) => void;
   setLanguage: (lang: SupportedLanguage) => void;
   /** Marks onboarding questionnaire as complete. Does not imply sign-in. */
   complete: () => void;
@@ -75,8 +80,6 @@ interface OnboardingState {
 
 const initialData: OnboardingData = {
   goals: [],
-  sessionMode: null,
-  wantsNotes: null,
   level: null,
 };
 
@@ -85,35 +88,46 @@ export const useOnboardingStore = create<OnboardingState>()(
     (set) => ({
       _hasHydrated: false,
       isCompleted: false,
+      completedOnboardingVersion: null,
       hasEverSignedIn: false,
+      safetyAcknowledged: false,
       language: 'en',
       data: initialData,
 
       setGoals: (goals) =>
         set((s) => ({ data: { ...s.data, goals } })),
 
-      setSessionMode: (sessionMode) =>
-        set((s) => ({ data: { ...s.data, sessionMode } })),
-
-      setWantsNotes: (wantsNotes) =>
-        set((s) => ({ data: { ...s.data, wantsNotes } })),
-
       setLevel: (level) =>
         set((s) => ({ data: { ...s.data, level } })),
 
+      setSafetyAcknowledged: (safetyAcknowledged) => set({ safetyAcknowledged }),
+
       setLanguage: (language) => set({ language }),
 
-      complete: () => set({ isCompleted: true }),
+      complete: () => set({ isCompleted: true, completedOnboardingVersion: ONBOARDING_VERSION }),
 
       markSignedIn: () => set({ hasEverSignedIn: true }),
 
       // reset() intentionally preserves hasEverSignedIn — it is device history,
       // not questionnaire state.
-      reset: () => set({ isCompleted: false, data: initialData }),
+      reset: () =>
+        set({
+          isCompleted: false,
+          completedOnboardingVersion: null,
+          safetyAcknowledged: false,
+          data: initialData,
+        }),
 
       // resetFull() clears everything including hasEverSignedIn, used after
       // account deletion so the user goes through the full onboarding flow.
-      resetFull: () => set({ isCompleted: false, hasEverSignedIn: false, data: initialData }),
+      resetFull: () =>
+        set({
+          isCompleted: false,
+          completedOnboardingVersion: null,
+          hasEverSignedIn: false,
+          safetyAcknowledged: false,
+          data: initialData,
+        }),
     }),
     {
       name: 'deeply-onboarding',
