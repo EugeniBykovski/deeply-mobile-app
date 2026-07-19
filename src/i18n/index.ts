@@ -7,12 +7,14 @@ import enOnboarding from './locales/en/onboarding.json';
 import enAuth from './locales/en/auth.json';
 import enTabs from './locales/en/tabs.json';
 import enLegal from './locales/en/legal.json';
+import enTrialAnnouncement from './locales/en/trialAnnouncement.json';
 
 import ruCommon from './locales/ru/common.json';
 import ruOnboarding from './locales/ru/onboarding.json';
 import ruAuth from './locales/ru/auth.json';
 import ruTabs from './locales/ru/tabs.json';
 import ruLegal from './locales/ru/legal.json';
+import ruTrialAnnouncement from './locales/ru/trialAnnouncement.json';
 
 export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -33,6 +35,7 @@ i18n.use(initReactI18next).init({
       auth: enAuth,
       tabs: enTabs,
       legal: enLegal,
+      trialAnnouncement: enTrialAnnouncement,
     },
     ru: {
       common: ruCommon,
@@ -40,6 +43,7 @@ i18n.use(initReactI18next).init({
       auth: ruAuth,
       tabs: ruTabs,
       legal: ruLegal,
+      trialAnnouncement: ruTrialAnnouncement,
     },
   },
   defaultNS: 'common',

@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useOnboardingStore, waitForOnboardingHydration } from '@/store/onboardingStore';
 import { usePurchaseStore } from '@/store/purchaseStore';
 import { SplashView } from '@/shared/components/SplashView';
+import { TrialAnnouncementModal } from '@/features/trial-announcement';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -190,6 +191,9 @@ export default function RootLayout() {
               />
             </View>
           )}
+
+          {/* Evaluated once for the whole app shell — not mounted per-tab. */}
+          {!showSplash && <TrialAnnouncementModal />}
         </SafeAreaProvider>
       </QueryClientProvider>
     </I18nextProvider>
