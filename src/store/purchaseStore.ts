@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import Purchases from 'react-native-purchases';
+import Purchases, { type PurchasesEntitlementInfo } from 'react-native-purchases';
 import { env } from '@/config/env';
 import type { SubscriptionStatus } from '@/api/types';
 
@@ -12,6 +12,10 @@ export const PRO_ENTITLEMENT = 'Deeply Pro';
 interface PurchaseState {
   isPro: boolean;
   proExpiresAt: string | null;
+  /** entitlements.active['Deeply Pro'] — undefined when not currently active */
+  entitlementActive: PurchasesEntitlementInfo | null;
+  /** entitlements.all['Deeply Pro'] — undefined if never purchased/trialed at all */
+  entitlementAny: PurchasesEntitlementInfo | null;
   /** True while the SDK hasn't returned customer info yet */
   isLoading: boolean;
   /** True while a purchase / restore is in progress */
@@ -29,9 +33,25 @@ interface PurchaseState {
   setFromBackend: (status: SubscriptionStatus) => void;
 }
 
+function entitlementFieldsFromInfo(info: {
+  entitlements: { active: Record<string, PurchasesEntitlementInfo>; all: Record<string, PurchasesEntitlementInfo> };
+}) {
+  const active = info.entitlements.active[PRO_ENTITLEMENT] ?? null;
+  const any = info.entitlements.all[PRO_ENTITLEMENT] ?? null;
+  return {
+    isPro: active !== null,
+    proExpiresAt: active?.expirationDate ?? null,
+    entitlementActive: active,
+    entitlementAny: any,
+    isLoading: false,
+  };
+}
+
 export const usePurchaseStore = create<PurchaseState>((set, get) => ({
   isPro: false,
   proExpiresAt: null,
+  entitlementActive: null,
+  entitlementAny: null,
   isLoading: true,
   isPurchasing: false,
 
@@ -47,13 +67,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     // real-time listener and warms up the customer-info cache.
     if (!_listenerAdded) {
       Purchases.addCustomerInfoUpdateListener((info) => {
-        const isActive = info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
-        const ent = info.entitlements.active[PRO_ENTITLEMENT];
-        set({
-          isPro: isActive,
-          proExpiresAt: ent?.expirationDate ?? null,
-          isLoading: false,
-        });
+        set(entitlementFieldsFromInfo(info));
       });
       _listenerAdded = true;
     }
@@ -66,13 +80,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     if (!userId) return;
     try {
       const { customerInfo } = await Purchases.logIn(userId);
-      const isActive = customerInfo.entitlements.active[PRO_ENTITLEMENT] !== undefined;
-      const ent = customerInfo.entitlements.active[PRO_ENTITLEMENT];
-      set({
-        isPro: isActive,
-        proExpiresAt: ent?.expirationDate ?? null,
-        isLoading: false,
-      });
+      set(entitlementFieldsFromInfo(customerInfo));
     } catch (err) {
       console.warn('[Purchases] identify error:', err);
     }
@@ -84,19 +92,13 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     } catch {
       // Ignore — SDK may already be anonymous
     }
-    set({ isPro: false, proExpiresAt: null });
+    set({ isPro: false, proExpiresAt: null, entitlementActive: null, entitlementAny: null });
   },
 
   async refreshFromSdk() {
     try {
       const info = await Purchases.getCustomerInfo();
-      const isActive = info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
-      const ent = info.entitlements.active[PRO_ENTITLEMENT];
-      set({
-        isPro: isActive,
-        proExpiresAt: ent?.expirationDate ?? null,
-        isLoading: false,
-      });
+      set(entitlementFieldsFromInfo(info));
     } catch (err) {
       console.warn('[Purchases] refreshFromSdk error:', err);
       set({ isLoading: false });

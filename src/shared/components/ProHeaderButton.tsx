@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Pressable } from "react-native";
 import { router } from "expo-router";
-import { usePurchaseStore } from "@/store/purchaseStore";
+import { useEntitlement } from "@/features/entitlement/useEntitlement";
 import { AppText } from "./AppText";
 import { colors } from "@/theme";
 
@@ -16,18 +16,17 @@ const SLOT_WIDTH = 62;
  * - Not pro → teal "Get Pro" pill → navigates to /paywall (same as Settings row)
  * - Pro → amber crown badge (static, no tap action needed)
  *
- * Fixed dimensions prevent layout shift when isPro flips after a purchase.
+ * Fixed dimensions prevent layout shift when access state flips after a purchase.
  */
 export const ProHeaderButton = React.memo(function ProHeaderButton() {
-  const isPro = usePurchaseStore((s) => s.isPro);
-  const isLoading = usePurchaseStore((s) => s.isLoading);
+  const { hasFullAccess, isLoading } = useEntitlement();
 
   // Empty fixed-width placeholder while SDK hasn't resolved yet.
   if (isLoading) {
     return <View style={{ width: SLOT_WIDTH }} />;
   }
 
-  if (isPro) {
+  if (hasFullAccess) {
     return (
       <View style={{ width: SLOT_WIDTH, alignItems: "center" }}>
         <View

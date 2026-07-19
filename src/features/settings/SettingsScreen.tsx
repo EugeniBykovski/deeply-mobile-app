@@ -15,7 +15,7 @@ import { AppText } from "@/shared/components/AppText";
 import { LiIcon } from "@/shared/components/LiIcon";
 import { BackHeader } from "@/shared/components/BackHeader";
 import { useAuthStore } from "@/store/authStore";
-import { usePurchaseStore } from "@/store/purchaseStore";
+import { useEntitlement } from "@/features/entitlement/useEntitlement";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import { authService } from "@/api/services/auth.service";
 import { colors } from "@/theme";
@@ -193,7 +193,7 @@ function LanguageSection() {
 export function SettingsScreen() {
   const { t } = useTranslation("common");
   const { clearAuth, isAuthenticated } = useAuthStore();
-  const isPro = usePurchaseStore((s) => s.isPro);
+  const { hasFullAccess } = useEntitlement();
   const resetOnboarding = useOnboardingStore((s) => s.resetFull);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
@@ -236,7 +236,7 @@ export function SettingsScreen() {
 
         {/* 1 ── Deeply Pro ─────────────────────────────────────────────── */}
         <Section title="Deeply Pro">
-          {isPro ? (
+          {hasFullAccess ? (
             <Row
               icon="crown"
               label={t("manage_subscription")}

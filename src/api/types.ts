@@ -32,10 +32,26 @@ export interface User {
 
 // ─── Purchases ────────────────────────────────────────────────────────────────
 
+export type EntitlementState =
+  | 'trial_active'
+  | 'pro_active'
+  | 'free'
+  | 'expired'
+  | 'billing_issue'
+  | 'unknown';
+
 export interface SubscriptionStatus {
   isPro: boolean;
   proExpiresAt: string | null;
   proActivatedAt: string | null;
+  state: EntitlementState;
+  hasFullAccess: boolean;
+  isTrialActive: boolean;
+  isProActive: boolean;
+  trialEndsAt: string | null;
+  trialDaysRemaining: number | null;
+  willRenew: boolean | null;
+  periodType: string | null;
 }
 
 // ─── Culture ──────────────────────────────────────────────────────────────────

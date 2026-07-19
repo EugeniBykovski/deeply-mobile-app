@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { TOKEN_KEYS } from '@/api/client';
 import { authEvents } from '@/api/authEvents';
 import type { User } from '@/api/types';
+import { purchaseService } from '@/api/services/purchase.service';
 import { usePurchaseStore } from './purchaseStore';
 import { useOnboardingStore } from './onboardingStore';
 
@@ -41,6 +42,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useOnboardingStore.getState().markSignedIn();
     // Associate RevenueCat with the authenticated user ID
     usePurchaseStore.getState().identify(user.id).catch(() => {});
+    // Proactively nudge the backend forward rather than waiting on RC
+    // webhook delivery — mirrors syncAfterPurchase()'s fire-and-forget pattern.
+    purchaseService
+      .sync()
+      .then((status) => usePurchaseStore.getState().setFromBackend(status))
+      .catch(() => {});
   },
 
   setUser: (user) => set({ user }),
