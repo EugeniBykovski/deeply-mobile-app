@@ -32,6 +32,7 @@ import { WaveVisualization } from './components/WaveVisualization';
 import { CountdownOverlay } from './components/CountdownOverlay';
 import { ModeToggle } from './components/ModeToggle';
 import { Co2RatingPicker } from './components/Co2RatingPicker';
+import { buildSessionTimeline } from './sequence/buildSessionTimeline';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -74,13 +75,18 @@ export function TrainingRunScreen() {
   const totalRounds  = Math.max(1, parseInt(params.repeats ?? '1', 10) || 1);
   const trackCO2     = params.saveCO2 === '1';
 
+  // The full multi-round timeline — round repetition and any adjacent-phase
+  // boundary (e.g. a round ending on INHALE followed by a round starting on
+  // INHALE) are resolved once here, so nothing downstream needs its own
+  // round-wrap bookkeeping or phase-boundary special-casing.
+  const timeline = useMemo(() => buildSessionTimeline(steps, totalRounds), [steps, totalRounds]);
+
   const { visualizationMode, setVisualizationMode } = useTrainingPrefsStore();
   const { addRun, setInProgress, updateRunId } = useTrainingSessionStore();
 
   const [runState,   setRunState]   = useState<RunState>('idle');
   const [stepIndex,  setStepIndex]  = useState(0);
-  const [roundIndex, setRoundIndex] = useState(0);
-  const [timeLeft,   setTimeLeft]   = useState(steps[0]?.durationSeconds ?? 0);
+  const [timeLeft,   setTimeLeft]   = useState(timeline[0]?.durationSeconds ?? 0);
   const [elapsed,    setElapsed]    = useState(0);
   const [co2Score,   setCo2Score]   = useState<number | null>(null);
 
@@ -89,9 +95,9 @@ export function TrainingRunScreen() {
   const isSavingRef      = useRef(false);
   const runIdRef         = useRef<string | null>(null);
   const pendingFinishRef = useRef(false);
-  const roundIndexRef    = useRef(0);
 
-  const currentStep = steps[stepIndex];
+  const currentStep = timeline[stepIndex];
+  const roundIndex  = currentStep?.roundIndex ?? 0;
   const phaseColor  = PHASE_COLORS[currentStep?.phase ?? 'REST'] ?? colors.accent;
 
   const phaseLabel = useMemo(() => ({
@@ -103,11 +109,11 @@ export function TrainingRunScreen() {
 
   // ─── Animated values ─────────────────────────────────────────────────────────
 
-  const breathScale   = useSharedValue(PHASE_SCALE_FROM[steps[0]?.phase ?? 'REST'] ?? 0.55);
+  const breathScale   = useSharedValue(PHASE_SCALE_FROM[timeline[0]?.phase ?? 'REST'] ?? 0.55);
   const circleOpacity = useSharedValue(0.18);
 
   const phaseProgress = useSharedValue(
-    PHASE_ORDER.indexOf((steps[0]?.phase ?? 'REST') as any),
+    PHASE_ORDER.indexOf((timeline[0]?.phase ?? 'REST') as any),
   );
 
   const animatedPhaseColor = useDerivedValue(() =>
@@ -258,26 +264,18 @@ export function TrainingRunScreen() {
   const advance = useCallback(() => {
     setStepIndex((prevStep) => {
       const nextStep = prevStep + 1;
-      if (nextStep < steps.length) {
-        setTimeLeft(steps[nextStep].durationSeconds);
+      if (nextStep < timeline.length) {
+        setTimeLeft(timeline[nextStep].durationSeconds);
         return nextStep;
       }
 
-      const nextRound = roundIndexRef.current + 1;
-      if (nextRound >= totalRounds) {
-        stopInterval();
-        setRunState('done');
-        pendingFinishRef.current = true;
-        return prevStep;
-      }
-
-      roundIndexRef.current = nextRound;
-      setRoundIndex(nextRound);
-      setTimeLeft(steps[0].durationSeconds);
-      return 0;
+      stopInterval();
+      setRunState('done');
+      pendingFinishRef.current = true;
+      return prevStep;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steps, totalRounds, stopInterval]);
+  }, [timeline, stopInterval]);
 
   useEffect(() => {
     if (runState === 'done' && pendingFinishRef.current) {
@@ -319,7 +317,7 @@ export function TrainingRunScreen() {
   }
 
   function handleStart() {
-    if (steps.length === 0) return;
+    if (timeline.length === 0) return;
     setRunState('countdown');
   }
 
@@ -361,7 +359,7 @@ export function TrainingRunScreen() {
   const isPaused     = runState === 'paused';
   const isCountdown  = runState === 'countdown';
   const isRunning    = runState === 'running';
-  const progress     = steps.length > 0 ? (stepIndex + 1) / steps.length : 0;
+  const progress     = timeline.length > 0 ? (stepIndex + 1) / timeline.length : 0;
   const showRounds   = totalRounds > 1;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
@@ -425,7 +423,7 @@ export function TrainingRunScreen() {
             </AppText>
             <AppText secondary style={{ marginBottom: 4 }}>{formatTime(elapsed)}</AppText>
             <AppText variant="caption" muted>
-              {steps.length * totalRounds} {t('train_run_steps_completed')}
+              {timeline.length} {t('train_run_steps_completed')}
             </AppText>
 
             {trackCO2 && (
@@ -517,7 +515,7 @@ export function TrainingRunScreen() {
                   </AppText>
                 )}
                 <AppText variant="caption" muted>
-                  {t('train_run_step', { current: stepIndex + 1, total: steps.length })}
+                  {t('train_run_step', { current: stepIndex + 1, total: timeline.length })}
                 </AppText>
                 <AppText variant="caption" muted style={{ marginTop: 2 }}>
                   {formatTime(elapsed)}
@@ -527,7 +525,7 @@ export function TrainingRunScreen() {
 
             {!isIdle && !isCountdown && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center', maxWidth: 280, marginBottom: 24 }}>
-                {steps.map((s, idx) => (
+                {timeline.map((s, idx) => (
                   <View
                     key={idx}
                     style={{
