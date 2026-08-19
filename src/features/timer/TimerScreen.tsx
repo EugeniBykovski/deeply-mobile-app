@@ -1,20 +1,20 @@
-import React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { AppText } from '@/shared/components/AppText';
-import { LiIcon } from '@/shared/components/LiIcon';
-import { PageTopBar } from '@/shared/components/PageTopBar';
-import { ProHeaderButton } from '@/shared/components/ProHeaderButton';
-import { ProfileButton } from '@/shared/components/ProfileButton';
-import { StatCard } from '@/features/results/components/StatCard';
-import { formatTime } from '@/utils/format';
-import { colors } from '@/theme';
-import { useRestorableAttempt } from './persistence/activeAttemptStore';
-import { useTimerStats } from './hooks/useTimerStats';
-import type { TimerMode } from './domain/timerEngine';
+import React from "react";
+import { Pressable, ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { AppText } from "@/shared/components/AppText";
+import { LiIcon } from "@/shared/components/LiIcon";
+import { PageTopBar } from "@/shared/components/PageTopBar";
+import { ProHeaderButton } from "@/shared/components/ProHeaderButton";
+import { ProfileButton } from "@/shared/components/ProfileButton";
+import { StatCard } from "@/features/results/components/StatCard";
+import { formatTime } from "@/utils/format";
+import { colors } from "@/theme";
+import { useRestorableAttempt } from "./persistence/activeAttemptStore";
+import { useTimerStats } from "./hooks/useTimerStats";
+import type { TimerMode } from "./domain/timerEngine";
 
 function ModeCard({
   icon,
@@ -46,8 +46,8 @@ function ModeCard({
           height: 48,
           borderRadius: 14,
           backgroundColor: `${colors.accent}18`,
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <LiIcon name={icon} size={22} color={colors.accent} />
@@ -65,19 +65,19 @@ function ModeCard({
 }
 
 export function TimerScreen() {
-  const { t } = useTranslation('tabs');
+  const { t } = useTranslation("tabs");
   const restorable = useRestorableAttempt();
   const statsQuery = useTimerStats();
 
   function startMode(mode: TimerMode) {
-    router.push({ pathname: '/timer/session', params: { mode } } as any);
+    router.push({ pathname: "/timer/session", params: { mode } } as any);
   }
 
   function resumeRestorable() {
     if (!restorable.snapshot?.mode) return;
     router.push({
-      pathname: '/timer/session',
-      params: { mode: restorable.snapshot.mode, restore: '1' },
+      pathname: "/timer/session",
+      params: { mode: restorable.snapshot.mode, restore: "1" },
     } as any);
   }
 
@@ -85,22 +85,22 @@ export function TimerScreen() {
   const diveBest = statsQuery.data?.dive?.bestDurationSeconds;
 
   return (
-    <SafeAreaView className="flex-1 bg-brand-bg" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-brand-bg" edges={["top"]}>
       <StatusBar style="light" />
       <PageTopBar
-        title={t('timer_title')}
+        title={t("timer_title")}
         rightSlot={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
+            <ProHeaderButton />
             <Pressable
-              onPress={() => router.push('/timer/history' as any)}
+              onPress={() => router.push("/timer/history" as any)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               className="active:opacity-60"
               accessibilityRole="button"
-              accessibilityLabel={t('timer_history')}
+              accessibilityLabel={t("timer_history")}
             >
               <LiIcon name="trend-up-1" size={22} color={colors.inkMuted} />
             </Pressable>
-            <ProHeaderButton />
             <ProfileButton />
           </View>
         }
@@ -108,7 +108,12 @@ export function TimerScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 16 }}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 4,
+          paddingBottom: 32,
+          gap: 16,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {restorable.hasRestorable && (
@@ -123,12 +128,12 @@ export function TimerScreen() {
             }}
           >
             <AppText weight="semibold" style={{ color: colors.warning }}>
-              {t('timer_restore_title')}
+              {t("timer_restore_title")}
             </AppText>
             <AppText variant="caption" secondary style={{ lineHeight: 18 }}>
-              {t('timer_restore_body')}
+              {t("timer_restore_body")}
             </AppText>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flexDirection: "row", gap: 10 }}>
               <Pressable
                 onPress={() => restorable.discard()}
                 className="active:opacity-75"
@@ -138,46 +143,54 @@ export function TimerScreen() {
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: colors.border,
-                  alignItems: 'center',
+                  alignItems: "center",
                 }}
               >
-                <AppText weight="semibold">{t('timer_restore_discard')}</AppText>
+                <AppText weight="semibold">
+                  {t("timer_restore_discard")}
+                </AppText>
               </Pressable>
               <Pressable
                 onPress={resumeRestorable}
                 className="active:opacity-80"
-                style={{ flex: 1, paddingVertical: 10, borderRadius: 12, backgroundColor: colors.warning, alignItems: 'center' }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  backgroundColor: colors.warning,
+                  alignItems: "center",
+                }}
               >
                 <AppText weight="semibold" style={{ color: colors.inkInverse }}>
-                  {t('timer_restore_resume')}
+                  {t("timer_restore_resume")}
                 </AppText>
               </Pressable>
             </View>
           </View>
         )}
 
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flexDirection: "row", gap: 12 }}>
           <StatCard
-            value={breathHoldBest != null ? formatTime(breathHoldBest) : '—'}
-            label={t('timer_stats_best') + ' · ' + t('timer_mode_breath_hold')}
+            value={breathHoldBest != null ? formatTime(breathHoldBest) : "—"}
+            label={t("timer_stats_best") + " · " + t("timer_mode_breath_hold")}
           />
           <StatCard
-            value={diveBest != null ? formatTime(diveBest) : '—'}
-            label={t('timer_stats_best') + ' · ' + t('timer_mode_dive')}
+            value={diveBest != null ? formatTime(diveBest) : "—"}
+            label={t("timer_stats_best") + " · " + t("timer_mode_dive")}
           />
         </View>
 
         <ModeCard
           icon="stopwatch"
-          title={t('timer_mode_breath_hold')}
-          hint={t('timer_mode_breath_hold_hint')}
-          onPress={() => startMode('BREATH_HOLD')}
+          title={t("timer_mode_breath_hold")}
+          hint={t("timer_mode_breath_hold_hint")}
+          onPress={() => startMode("BREATH_HOLD")}
         />
         <ModeCard
           icon="diver"
-          title={t('timer_mode_dive')}
-          hint={t('timer_mode_dive_hint')}
-          onPress={() => startMode('DIVE')}
+          title={t("timer_mode_dive")}
+          hint={t("timer_mode_dive_hint")}
+          onPress={() => startMode("DIVE")}
         />
       </ScrollView>
     </SafeAreaView>

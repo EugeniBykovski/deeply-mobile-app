@@ -20,7 +20,7 @@ const SYMBOL_MAP: Record<string, string> = {
   "surfboard-2": "figure.surfing",
   stopwatch: "stopwatch",
   trophy: "trophy.fill",
-  diver: "figure.scuba.diving",
+  diver: "figure.open.water.swim",
   "trend-up-1": "chart.line.uptrend.xyaxis",
   "books-2": "books.vertical",
   newapi: "sparkles",
