@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AppText } from '@/shared/components/AppText';
+import { BigDigitText } from '@/shared/components/BigDigitText';
 import { LiIcon } from '@/shared/components/LiIcon';
 import { StatCard } from '@/features/results/components/StatCard';
 import { formatTime } from '@/utils/format';
@@ -172,9 +173,9 @@ export function TimerSessionScreen() {
         {state.status === 'preparing' && (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
             <AppText secondary>{t('timer_prep_label')}</AppText>
-            <AppText weight="bold" style={{ fontSize: 64, color: colors.accent }}>
+            <BigDigitText color={colors.accent} maxFontSize={72} minFontSize={56}>
               {Math.max(0, Math.ceil(((state.prepSeconds ?? 0) * 1000 - elapsedMs) / 1000))}
-            </AppText>
+            </BigDigitText>
             <Pressable onPress={stop} className="active:opacity-75" style={{ paddingVertical: 12, paddingHorizontal: 28 }}>
               <AppText weight="semibold" style={{ color: colors.accent }}>
                 {t('timer_prep_skip')}
@@ -191,9 +192,9 @@ export function TimerSessionScreen() {
             <AppText weight="semibold" style={{ color: colors.accent, letterSpacing: 0.5 }}>
               {activeLabel}
             </AppText>
-            <AppText weight="bold" style={{ fontSize: 56, color: colors.ink }}>
+            <BigDigitText color={colors.ink} maxFontSize={56} minFontSize={44}>
               {formatTime(Math.floor(elapsedMs / 1000))}
-            </AppText>
+            </BigDigitText>
 
             <Pressable
               onPress={stop}
@@ -229,9 +230,9 @@ export function TimerSessionScreen() {
             <AppText weight="semibold" style={{ color: colors.warning, letterSpacing: 0.5 }}>
               {recoveringLabel}
             </AppText>
-            <AppText weight="bold" style={{ fontSize: 44, color: colors.ink }}>
+            <BigDigitText color={colors.ink} maxFontSize={44} minFontSize={36}>
               {formatTime(Math.floor(elapsedMs / 1000))}
-            </AppText>
+            </BigDigitText>
 
             {pendingAttempt && (
               <AttemptDetailsForm mode={mode} onSave={handleConfirmSave} onSkip={handleConfirmSkip} />

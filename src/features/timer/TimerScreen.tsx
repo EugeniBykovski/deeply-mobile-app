@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
@@ -106,7 +106,11 @@ export function TimerScreen() {
         }
       />
 
-      <View style={{ flex: 1, paddingHorizontal: 20, gap: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32, gap: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
         {restorable.hasRestorable && (
           <View
             style={{
@@ -175,7 +179,7 @@ export function TimerScreen() {
           hint={t('timer_mode_dive_hint')}
           onPress={() => startMode('DIVE')}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
